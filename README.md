@@ -4,7 +4,7 @@
 
 [![Codex Skill](https://img.shields.io/badge/Codex-Skill-111827)](#快速开始)
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883)](#模板能力)
-[![PRD Template](https://img.shields.io/badge/Template-2.2.0-1677ff)](#模板能力)
+[![PRD Template](https://img.shields.io/badge/Template-2.2.1-1677ff)](#模板能力)
 [![pnpm](https://img.shields.io/badge/pnpm-11.1.1-f69220)](#维护与验证)
 
 `prd-skill-dev` 是 Codex `$prd` 技能的开发源码仓库。它把零散需求转成一个完整的产品评审工作台：左侧功能目录、可交互高保真原型、带标注的 PRD 画布、结构化需求文档、追踪矩阵、AI 交接说明、评审评论、定版历史和平台无关发布包。
@@ -81,7 +81,7 @@ $prd 做一个移动端会员积分兑换功能原型
 
 ## 模板能力
 
-当前模板版本：`2.2.0`
+当前模板版本：`2.2.1`
 
 模板会生成一个 Vue3 PRD 工作区，默认包含：
 
@@ -139,6 +139,7 @@ node scripts/sync-installed-skill.mjs --install
 
 ## 变更记录
 
+- 2026-08-20 17:22:50 CST：锁定原型启动入口，统一平台 UI 库样式加载，并增加 render-function 子组件与 `scoped` 样式冲突校验。
 - 2026-08-20 15:55:53 CST：新增效果图预览区块，放入 PRD 标注画布、高保真原型、快照标注和文档查看截图。
 - 2026-08-20 15:46:13 CST：调整快速开始安装说明，优先提供适合 Codex 直接安装 GitHub skill 的使用方式。
 - 2026-08-20 15:40:48 CST：新增项目 README，补充定位、能力、快速开始、维护验证和模板边界说明。

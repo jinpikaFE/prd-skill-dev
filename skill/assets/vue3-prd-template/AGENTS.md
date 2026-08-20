@@ -2,7 +2,7 @@
 
 ## 可修改范围
 
-- `src/prototype/`：高保真产品原型和场景运行时。
+- `src/prototype/`：高保真产品原型和场景运行时，但不得修改已锁定的 `src/prototype/main.ts` 启动入口。
 - `src/data/prdData.ts`：需求、功能目录、画布、场景和原型数据。
 - `src/data/generatedDocs.ts`、`prd.md`、`requirements.json`、`traceability-matrix.md`、`ai-handoff.md`、`CHANGELOG.md`：同源需求文档。
 - `review-data/`、`versions/`：由工作台文件接口维护的草稿与定版 JSON 数据。
@@ -12,6 +12,8 @@
 - `.prd-template.json` 中 `lockedFiles` 列出的文件是工作台模板，不随具体业务原型修改。
 - `index.html` 和 `src/workbench/` 固定使用 Ant Design Vue。
 - `prototype.html` 通过 iframe 加载产品原型；移动端原型使用 Vant，桌面端原型使用 Ant Design Vue。
+- `src/prototype/main.ts` 固定负责平台判定、Ant Design Vue 注册和原型 UI 库样式加载，业务组件不得重复或覆盖该入口。
+- 同一 SFC 内使用 `defineComponent + h()` 创建子组件时，不得依赖外层 `<style scoped>` 为子组件提供样式；应拆分 SFC 或使用原型全局样式。
 - 禁止在工作台入口或工作台组件中导入 Vant、Vant CSS 或使用 `van-*` 组件。
 - 工作台按钮、菜单项、链接和输入控件需要悬浮说明时，使用 Ant Design Vue `Tooltip`，不得使用原生 `title`。弹窗可见标题、iframe 无障碍名称和业务数据中的 `title` 字段不属于悬浮提示。
 - 工作台文本需要单行或多行截断时，优先使用 `src/workbench/components/internal/EllipsisTooltipText.vue`；默认仅在真实溢出时展示完整文本 Tooltip，必须始终提示的说明场景显式使用 `tooltip-trigger="always"`。

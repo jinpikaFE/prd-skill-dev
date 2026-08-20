@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "templateVersion": "2.2.0",
+  "templateVersion": "2.2.1",
   "workbenchUiLibrary": "ant-design-vue",
   "prototypeUiLibraries": {
     "mobile": "vant",
     "desktop": "ant-design-vue"
   },
   "lockedFiles": {
-    "AGENTS.md": "20b13704e221e57213b84bcb37f77eb7ec7fc442e39cdbb95524c64aa96c741c",
-    "package.json": "f344e57dc392c39dd9b52dc623bfcd7d8ff28401c5ebd8c5b042d32af84e5e0c",
+    "AGENTS.md": "85f8ea1fc388dfdbf39d64ae23b4d8363046fc4f809668259f2d19a8b2c6312e",
+    "package.json": "8a0fc16f83918b7e4cd19ff6b5966859dcf85acc273d46559e4bb90a22ef19d2",
     "pnpm-lock.yaml": "e620f13e3b71c0a118b136606582d051b0205a9f535d05887bd1b93a119b0814",
     "pnpm-workspace.yaml": "7f0ecd9578ef9dc42ea67d0b2ac56f5e90c9ff07929e36203f5299871f0f06e8",
     "index.html": "22dc3aeedb8838007220261cce89fb32e38a70884ea7117896e26403f937e1e4",
@@ -19,6 +19,7 @@
     "scripts/build-review-package.mjs": "d8778b455d10ff9f03169a2fab7f71c9f570676ab6aeaf2ff4b1beb4e0bac071",
     "src/App.vue": "ab8d604f639fdf8b1c0a44649ce2d34d315468b4599665af3448bd0560f3f23b",
     "src/main.ts": "7d2b5ed5e4045dc4347bc190aa17e55572dac89b39e970cacb3e7f43e2376654",
+    "src/prototype/main.ts": "a124c45006a6238eafd28b432a6461fd4ce896dcbab0ffaabed0ecdd8e2a0c60",
     "src/styles.css": "f3d1ade925ca4500e7c90fb8fe43e654d493494ccd557e217989fd002e07e7be",
     "src/types.ts": "0daa711b3a2f7a1c9757e2f4082bc5b2198979a97a4c4b8399fd154db405c798",
     "src/stores/prd.ts": "01c1c3b0fdbc0299602658ab21562408b8956e1b686255b425b29a1afaafdc2c",

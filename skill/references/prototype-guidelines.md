@@ -13,7 +13,9 @@ Use `assets/vue3-prd-template/` as the starting point for every new `$prd` packa
 - Keep PRD facts in `src/data/prdData.ts`, aligned with `requirements.json` and `prd.md`.
 - Keep reusable review behavior in Vue components and the Pinia store.
 - Keep `index.html` and `src/workbench/` as the fixed Ant Design Vue application. Keep `prototype.html` and `src/prototype/` as the product application embedded by iframe. Do not import Vant or Vant CSS from the workbench entry.
-- Preserve `.prd-template.json` and its locked workbench files. Feature generation may change only the declared extension paths: prototype components/runtime, PRD data, generated documents, review JSON, and finalized version directories.
+- Preserve `.prd-template.json`, its locked workbench files, and the locked `src/prototype/main.ts` bootstrap. The bootstrap owns platform selection, Ant Design Vue registration, and platform CSS loading; feature generation must not recreate or overwrite that lifecycle inside product components.
+- Feature generation may change only the declared extension paths: prototype components/runtime other than the locked bootstrap, PRD data, generated documents, review JSON, and finalized version directories.
+- Do not expect a parent SFC's `<style scoped>` rules to style child components created with `defineComponent + h()`. Split those children into SFCs with their own styles, use explicit `:deep()` selectors where appropriate, or keep shared product styles in `src/prototype/prototype.css` or another prototype-global stylesheet.
 - Do not fall back to a standalone handcrafted HTML page.
 - Do not copy external open-source project code into the generated package unless the user explicitly authorizes that dependency and license review. The bundled template may use common Vue3/Vite conventions and dependency choices.
 

@@ -8,6 +8,7 @@
 - Ant Design Vue `Select` 的长选项不得依赖字符串标签自动生成的原生 `title`；使用组件节点标签和 `EllipsisTooltipText` 接管溢出提示。
 - 工作台展示 `REQ-###` 标签时统一使用 `RequirementTag.vue`，Tooltip 至少包含需求标题、说明和首条验收标准。
 - `skill/assets/vue3-prd-template/src/workbench/`、入口、Store 和工作台样式属于锁定模板；业务生成只修改 `src/prototype/`、`src/data/prdData.ts` 和需求文档。
+- `skill/assets/vue3-prd-template/src/prototype/main.ts` 属于锁定启动入口，固定负责平台 UI 库注册和样式加载；业务原型不得覆盖。
 - 禁止使用 `localStorage`、`sessionStorage` 或 IndexedDB 保存评审、评论和版本数据。
 - 本地历史版本和线上评审中，定版内容与产品标注只读；本地历史版本可新增匿名评论，每条评论必须保存并展示创建日期。
 - 定版时的冻结评论保留在 `review-data.json`，定版后新增评论保存在对应版本的 `review-comments.json`；线上评论由目标部署平台按 `deployment-handoff.json` 接入，未接入前保持只读。

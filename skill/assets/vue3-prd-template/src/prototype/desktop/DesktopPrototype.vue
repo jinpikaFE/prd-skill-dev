@@ -76,7 +76,6 @@
 
 <script setup lang="ts">
 import zhCN from "ant-design-vue/es/locale/zh_CN";
-import "ant-design-vue/dist/reset.css";
 import { usePrototypeRuntime } from "../runtime";
 import "../prototype.css";
 

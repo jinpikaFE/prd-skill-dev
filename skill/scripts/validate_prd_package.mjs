@@ -325,11 +325,31 @@ if (prototypeMain && !/import\(["']\.\/mobile\/MobilePrototype\.vue["']\)/.test(
 if (prototypeMain && !/import\(["']\.\/desktop\/DesktopPrototype\.vue["']\)/.test(prototypeMain)) {
   errors.push("src/prototype/main.ts must lazy-load the desktop prototype.");
 }
-if (mobileSource && (!/from\s+["']vant["']/.test(mobileSource) || !/vant\/lib\/index\.css/.test(mobileSource))) {
-  errors.push("The mobile prototype must use Vant and load Vant CSS inside the prototype document.");
+if (prototypeMain && !/import\(["']ant-design-vue["']\)/.test(prototypeMain)) {
+  errors.push("src/prototype/main.ts must register Ant Design Vue for the desktop prototype.");
 }
-if (desktopSource && (!/ant-design-vue/.test(desktopSource) || !/ant-design-vue\/dist\/reset\.css/.test(desktopSource))) {
-  errors.push("The desktop prototype must use Ant Design Vue and load its reset inside the prototype document.");
+if (prototypeMain && !/import\(["']ant-design-vue\/dist\/reset\.css["']\)/.test(prototypeMain)) {
+  errors.push("src/prototype/main.ts must load the Ant Design Vue reset before mounting the desktop prototype.");
+}
+if (prototypeMain && !/\.use\(Antd\)/.test(prototypeMain)) {
+  errors.push("src/prototype/main.ts must install Ant Design Vue before mounting the desktop prototype.");
+}
+if (prototypeMain && !/import\(["']vant\/lib\/index\.css["']\)/.test(prototypeMain)) {
+  errors.push("src/prototype/main.ts must load Vant CSS before mounting the mobile prototype.");
+}
+if (mobileSource && (!/from\s+["']vant["']/.test(mobileSource) || !/<van-/i.test(mobileSource))) {
+  errors.push("The mobile prototype must render Vant components.");
+}
+if (desktopSource && (!/ant-design-vue/.test(desktopSource) || !/<a-/i.test(desktopSource))) {
+  errors.push("The desktop prototype must render Ant Design Vue components.");
+}
+for (const file of sourceFiles.filter((sourceFile) => sourceFile.startsWith("src/prototype/") && sourceFile.endsWith(".vue"))) {
+  const componentSource = readText(file);
+  const hasScopedStyle = /<style\b[^>]*\bscoped\b/i.test(componentSource);
+  const hasRenderFunctionChildren = /defineComponent\s*\(/.test(componentSource) && /\bh\s*\(/.test(componentSource);
+  if (hasScopedStyle && hasRenderFunctionChildren) {
+    errors.push(`${file} must not rely on a parent scoped style for defineComponent + h() child components. Split them into styled SFCs or use prototype-global CSS.`);
+  }
 }
 if (fileExists("src/workbench/components/PrototypePreview.vue")) {
   const previewSource = readText("src/workbench/components/PrototypePreview.vue");

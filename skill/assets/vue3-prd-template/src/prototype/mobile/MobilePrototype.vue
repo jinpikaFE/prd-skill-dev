@@ -67,7 +67,6 @@
 
 <script setup lang="ts">
 import { Button as VanButton, Checkbox as VanCheckbox, Field as VanField, Form as VanForm, Tab as VanTab, Tabs as VanTabs } from "vant";
-import "vant/lib/index.css";
 import { usePrototypeRuntime } from "../runtime";
 import type { PrototypeAction } from "../../types";
 import "../prototype.css";

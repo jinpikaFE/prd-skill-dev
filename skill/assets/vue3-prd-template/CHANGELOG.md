@@ -1,5 +1,10 @@
 # 变更记录
 
+## 0.2.1 - 2026-08-20 17:22 CST
+
+- 原型启动入口统一负责 Ant Design Vue 注册与平台 CSS 加载，避免业务组件覆盖启动链路。
+- 将 `src/prototype/main.ts` 纳入模板锁定清单，并增加 `defineComponent + h()` 子组件与外层 `scoped` 样式的冲突校验。
+
 ## 0.2.0 - 2026-08-20 11:04 CST
 
 - 工作台固定使用 Ant Design Vue，移动端原型使用 Vant，桌面端原型使用 Ant Design Vue。
