@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "featureName": "示例功能",
+    "version": "0.1.0",
+    "updatedAt": "2026-08-19 00:00 CST",
+    "source": "Vue3 PRD 工作台模板占位数据"
+  },
+  "roles": [
+    {
+      "id": "user",
+      "label": "普通用户"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "normal",
+      "label": "正常流程"
+    }
+  ],
+  "states": [
+    {
+      "id": "normal",
+      "label": "正常"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "title": "核心操作入口",
+      "description": "用户可以识别并进入功能的核心操作。",
+      "priority": "must",
+      "screens": ["主界面"],
+      "interactions": ["入口点击"],
+      "states": ["normal"],
+      "acceptanceCriteria": ["入口清晰可见", "点击后反馈明确"]
+    }
+  ],
+  "flows": [],
+  "fields": [],
+  "permissions": [],
+  "mockApis": [],
+  "acceptanceChecks": [
+    "左侧目录、流程图、快照标注、评论定位、文档下载均可用。",
+    "拖动画布默认选中，滚轮可缩放画布。",
+    "标注作为产品说明，评论作为临时评审记录，两者分色、分列表展示。",
+    "标注、评论和版本均可删除，删除前需要二次确认。",
+    "顶部发版前需要二次确认，发版后生成 versions/vX.Y.Z/ 完整目录、versions/vX.Y.Z/review-data.json，并更新 versions/index.json。",
+    "草稿标注、标注编辑、被删除标注 ID 和评论写入 review-data/draft.json，不使用浏览器 localStorage。",
+    "版本重命名会重命名目录并追加 renameHistory，版本删除会删除目录和索引记录。"
+  ]
+}

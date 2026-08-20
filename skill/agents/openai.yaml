@@ -1,0 +1,8 @@
+interface:
+  display_name: "PRD 原型"
+  short_description: "生成 Vue3 高保真交互 PRD 原型，并自动带追踪和交接文档"
+  brand_color: "#2563EB"
+  default_prompt: "用 $prd 帮我生成「功能名」Vue3 PRD 原型，相关文档也一起生成。"
+
+policy:
+  allow_implicit_invocation: true
