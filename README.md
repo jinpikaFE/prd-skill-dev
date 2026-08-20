@@ -9,6 +9,14 @@
 
 `prd-skill-dev` 是 Codex `$prd` 技能的开发源码仓库。它把零散需求转成一个完整的产品评审工作台：左侧功能目录、可交互高保真原型、带标注的 PRD 画布、结构化需求文档、追踪矩阵、AI 交接说明、评审评论、定版历史和平台无关发布包。
 
+## 效果图预览
+
+| PRD 标注画布 | 高保真原型 |
+| --- | --- |
+| ![PRD 标注画布](docs/previews/prd-canvas-overview.png) | ![高保真原型](docs/previews/prototype-preview.png) |
+| 快照标注 | 文档查看 |
+| ![快照标注](docs/previews/snapshot-annotation.png) | ![文档查看](docs/previews/document-viewer.png) |
+
 ## 适合谁
 
 - 产品经理：快速把想法变成可以评审和演示的原型工作区。
@@ -131,5 +139,6 @@ node scripts/sync-installed-skill.mjs --install
 
 ## 变更记录
 
+- 2026-08-20 15:55:53 CST：新增效果图预览区块，放入 PRD 标注画布、高保真原型、快照标注和文档查看截图。
 - 2026-08-20 15:46:13 CST：调整快速开始安装说明，优先提供适合 Codex 直接安装 GitHub skill 的使用方式。
 - 2026-08-20 15:40:48 CST：新增项目 README，补充定位、能力、快速开始、维护验证和模板边界说明。
