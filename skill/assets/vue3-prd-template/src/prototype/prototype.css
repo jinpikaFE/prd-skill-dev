@@ -1,0 +1,30 @@
+:root {
+  color: #172033;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f5f7fa;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+.prototype-eyebrow { margin: 0 0 8px; color: #1677ff; font-size: 12px; font-weight: 700; }
+.prototype-subhead { color: #6b7280; line-height: 1.6; }
+.prototype-feedback { margin-top: 20px; padding: 12px; color: #365174; background: #f0f6ff; border-radius: 6px; }
+
+.mobile-prototype { min-height: 100vh; background: #f4f6f9; }
+.mobile-status { display: flex; justify-content: space-between; padding: 14px 22px 8px; font-size: 12px; font-weight: 700; background: #fff; }
+.mobile-content { min-height: calc(100vh - 38px); padding: 30px 22px 26px; background: #fff; }
+.mobile-content h1 { margin: 0; font-size: 28px; letter-spacing: 0; }
+.mobile-content .van-tabs { margin: 28px 0 22px; }
+.mobile-form { display: grid; gap: 14px; }
+.field-shell { border: 1px solid #edf0f4; border-radius: 6px; overflow: hidden; }
+.field-shell small { display: block; padding: 0 16px 10px; color: #8a94a6; }
+.mobile-actions { display: grid; gap: 10px; margin-top: 10px; }
+
+.desktop-prototype { min-height: 100vh; padding: 36px; background: #f4f6f9; }
+.desktop-header { display: flex; align-items: flex-start; justify-content: space-between; max-width: 1040px; margin: 0 auto 20px; }
+.desktop-header h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: 0; }
+.desktop-header p { margin: 0; color: #667085; }
+.desktop-panel { max-width: 1040px; margin: 0 auto; padding: 28px; background: #fff; border: 1px solid #e7eaf0; border-radius: 8px; }
+.desktop-form { max-width: 680px; }
+.desktop-actions { margin: 24px 0; }
+.snapshot { pointer-events: none; }

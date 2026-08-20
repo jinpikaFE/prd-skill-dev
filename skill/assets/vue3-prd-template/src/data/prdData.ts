@@ -8,6 +8,11 @@ export const prdData: PrdData = {
     updatedAt: "2026-08-19 00:00 CST",
     status: "draft",
     summary: "这是一个 Vue3 PRD 工作台模板，请基于真实需求替换数据。",
+    targetPlatform: "mobile",
+    prototypeViewport: {
+      width: 390,
+      height: 844,
+    },
   },
   roles: [
     { id: "user", label: "普通用户", description: "默认体验角色" },
@@ -116,6 +121,7 @@ export const prdData: PrdData = {
           chips: ["PRD 标注", "高保真"],
           bullets: ["替换为真实业务屏幕", "把标注绑定到 REQ ID"],
           snapshot: {
+            sceneId: "scene-default",
             tabId: "mode-a",
             stateId: "normal",
             caption: "默认操作快照",

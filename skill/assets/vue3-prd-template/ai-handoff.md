@@ -15,7 +15,7 @@
 - 草稿评审数据写入 `review-data/draft.json`；版本索引写入 `versions/index.json`；发版生成 `versions/vX.Y.Z/` 完整目录和该版本 `review-data.json`；重命名版本会重命名目录并追加 `renameHistory`；删除版本会删除目录和索引记录。
 - 标注是产品对原型区域的正式说明；评论是临时评审记录，两者需要分色、分列表展示。
 - 删除标注、删除评论、删除历史版本和点击发版都需要二次确认。
-- Vant、Mermaid、Pinia、markdown-it 只属于 PRD 原型工作台，不约束真实业务系统。
+- Ant Design Vue、Vant、Mermaid、Pinia、markdown-it 只属于 PRD 原型工作区，不约束真实业务系统。工作台固定使用 Ant Design Vue；移动端原型使用 Vant；桌面端原型使用 Ant Design Vue。
 
 ## 验收检查
 

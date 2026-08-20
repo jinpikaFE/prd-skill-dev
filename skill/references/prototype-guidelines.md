@@ -7,11 +7,13 @@ The `$prd` prototype is a Vue3 PRD workspace: it must support customer demos and
 Use `assets/vue3-prd-template/` as the starting point for every new `$prd` package.
 
 - Keep the project Vue3 + Vite + TypeScript.
-- Use Pinia for review/prototype workspace state, Vant as the default mobile UI component source, markdown-it for document preview, and Mermaid for PRD flowchart or mindmap rendering.
+- Use Pinia for review/prototype workspace state, Ant Design Vue for the fixed PRD workbench, Vant for mobile product prototypes, Ant Design Vue for desktop product prototypes, markdown-it for document preview, and Mermaid for PRD flowchart or mindmap rendering.
 - Use pnpm as the default package manager. Check Node.js and pnpm before installing or starting the workspace: supported Node.js is `>=20 <25`, supported pnpm is `>=10 <12`, and the template is verified on Node `v24.15.0` with pnpm `11.1.1`.
 - If Node.js is missing or outside range, help install a compatible Node runtime first. If pnpm is missing but Node is present, activate pnpm through Corepack when possible or another user-approved path.
 - Keep PRD facts in `src/data/prdData.ts`, aligned with `requirements.json` and `prd.md`.
 - Keep reusable review behavior in Vue components and the Pinia store.
+- Keep `index.html` and `src/workbench/` as the fixed Ant Design Vue application. Keep `prototype.html` and `src/prototype/` as the product application embedded by iframe. Do not import Vant or Vant CSS from the workbench entry.
+- Preserve `.prd-template.json` and its locked workbench files. Feature generation may change only the declared extension paths: prototype components/runtime, PRD data, generated documents, review JSON, and finalized version directories.
 - Do not fall back to a standalone handcrafted HTML page.
 - Do not copy external open-source project code into the generated package unless the user explicitly authorizes that dependency and license review. The bundled template may use common Vue3/Vite conventions and dependency choices.
 
@@ -19,7 +21,8 @@ Use `assets/vue3-prd-template/` as the starting point for every new `$prd` packa
 
 - Provide the PRD workspace as the first screen: left feature directory, top history/view controls, center PRD/prototype content, and right comment list.
 - Default to `PRD 标注`, because requirement review starts from feature scope and annotated evidence. Include `高保真原型` and `文档查看` switches for customer demo and requirement reading.
-- Build the high-fidelity product UI first, using Vant mobile components where practical. Keep it one click away. Avoid a generic landing page unless explicitly requested.
+- Resolve the target platform before product UI work. Explicit phone, App, H5, or mini-program requests use `mobile` and Vant. Explicit admin, management, Web console, or desktop workbench requests use `desktop` and Ant Design Vue. If no reliable platform signal exists, ask the user. If both platforms are requested, ask which one is primary and generate one primary platform.
+- Build the high-fidelity product UI first in the isolated prototype document. Keep it one click away. Avoid a generic landing page unless explicitly requested.
 - The left feature menu should look like a directory/file tree: larger feature groups as directories, smaller feature canvases as files. Order directories by feature priority. The first file under each directory should be that feature's Mermaid flowchart.
 - Clicking one file should render only that file's PRD canvas. Do not force all features into one giant board.
 - A small feature usually gets one operation snapshot. Use multiple snapshots only when one cannot clearly explain the state, comments, boundaries, or edge cases.
@@ -29,7 +32,7 @@ Use `assets/vue3-prd-template/` as the starting point for every new `$prd` packa
 - Include version/change affordances sourced from the same notes as `CHANGELOG.md`. Put the release button near the top history selector, require a second confirmation before release, and require a second confirmation before deleting a finalized version record. Finalized versions should also support rename with duplicate-name prevention.
 - Page release freezes the current draft into an independent version directory. The snapshot must at least include product-added annotations, generated annotation edits, deleted annotation IDs, and comments. Viewing a finalized version must be read-only for annotations/comments and must read `versions/vX.Y.Z/review-data.json`, not the current draft JSON, after the version is created.
 - Release always starts from the current draft. If the user is viewing a finalized version, clicking release should switch back to draft before opening or confirming the release. The first default release name is `1.0.0`, then increment the patch segment for later releases, such as `1.0.1`.
-- Use Vant components for selectors and popups whenever available, including history, role, scenario, state, and requirement selection. Avoid native `select` controls in the generated workspace.
+- Use Ant Design Vue `Menu`, `Select`, `Dropdown`, `Segmented`, `Modal`, and `Button` components for workbench navigation and controls. Avoid Vant and native `select` controls in the workbench.
 - Support adding temporary comments on PRD annotations. Store comments in Pinia state and persist the draft to `review-data/draft.json` through the local Vite PRD file API.
 - Support adding product annotations directly on the PRD canvas. Store added annotations in Pinia state and persist the draft to `review-data/draft.json` through the local Vite PRD file API.
 - Do not use browser `localStorage`, session storage, IndexedDB, or browser-only persistence for annotations, annotation edits, deleted annotation IDs, comments, or version records.
@@ -40,6 +43,7 @@ Use `assets/vue3-prd-template/` as the starting point for every new `$prd` packa
 - Provide zoom buttons, mouse-wheel zoom, and drag controls for the PRD canvas so focused function boards remain reviewable. Drag mode should be selected by default.
 - Provide an in-page generated document viewer so reviewers can read `prd.md`, `requirements.json`, traceability, AI handoff, and changelog without leaving the prototype. Markdown files should be rendered through the Markdown preview library, not displayed as raw plain text.
 - Include a download button in the document viewer for the currently selected generated document.
+- Use iframe messaging for prototype interactions. The prototype should report requirement IDs and user-visible actions to the workbench with the `prd:prototype-interaction` message contract; the workbench should ignore messages from another origin.
 - Use semantic component names, store fields, IDs, classes, and `data-req-id` / `data-req-ids` attributes so a coding agent can map UI to requirements.
 
 ## PRD Board Layout

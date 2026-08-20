@@ -1,4 +1,5 @@
 export type WorkspaceView = "prd" | "prototype" | "docs";
+export type TargetPlatform = "mobile" | "desktop";
 
 export type Choice = {
   id: string;
@@ -54,6 +55,7 @@ export type CanvasAnnotation = BoardAnnotation & {
 export type AnnotationPatch = Pick<BoardAnnotation, "title" | "detail" | "reqId">;
 
 export type BoardFrameSnapshot = {
+  sceneId?: string;
   tabId?: string;
   stateId?: string;
   caption?: string;
@@ -182,6 +184,11 @@ export type PrdData = {
     updatedAt: string;
     status: "draft" | "final";
     summary: string;
+    targetPlatform: TargetPlatform;
+    prototypeViewport: {
+      width: number;
+      height: number;
+    };
   };
   roles: Choice[];
   scenarios: Choice[];

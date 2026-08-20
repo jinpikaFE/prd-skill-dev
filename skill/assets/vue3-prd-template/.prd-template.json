@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "templateVersion": "2.0.0",
+  "workbenchUiLibrary": "ant-design-vue",
+  "prototypeUiLibraries": {
+    "mobile": "vant",
+    "desktop": "ant-design-vue"
+  },
+  "lockedFiles": {
+    "AGENTS.md": "e34387e97b203c964dcd53527502768dea152d7c21591a4775a0465864cd0bb4",
+    "index.html": "22dc3aeedb8838007220261cce89fb32e38a70884ea7117896e26403f937e1e4",
+    "prototype.html": "688a61b1f86793b9ccc4e9fc03d792c378a9cc471d0ba2cea0b0641b4c562780",
+    "vite.config.ts": "b3aa562c3f8b7a52aa0c1cb04930df74e584cef2a662c986a561a6b20bb20a27",
+    "src/App.vue": "ab8d604f639fdf8b1c0a44649ce2d34d315468b4599665af3448bd0560f3f23b",
+    "src/main.ts": "7d2b5ed5e4045dc4347bc190aa17e55572dac89b39e970cacb3e7f43e2376654",
+    "src/styles.css": "ee5945c5cd59c1d195efbcdcff32a1f57e9636965d22ab210c8208f152f10659",
+    "src/types.ts": "ea9e683a746f9acb0033d16e042719f62bfb49719e699a824f7dfa0726337980",
+    "src/stores/prd.ts": "37ba7a5b55a7bc3841a6c6de973110125e3b7ac836265ee2359ec40549e2184d",
+    "src/workbench/WorkbenchApp.vue": "c924ae8bed0d8bfb42cc502b111bc0e5fb94f6129be906836f755e0369be8f68",
+    "src/workbench/components/DocumentViewer.vue": "997f9d21bf2fc600cca8d26bc21563b76db3f481ab5e3fbbda63bad809feecf0",
+    "src/workbench/components/FeatureMenu.vue": "20dfed7d1399ff01b920a65018c01eaa3d3ab5bafb41531201627bc1c94cc827",
+    "src/workbench/components/PrdCanvas.vue": "e37f6e9067f461306ab5af36272eb6defbaddfcbfe2e2ac9262d8683497ca6f9",
+    "src/workbench/components/PrototypePreview.vue": "64536c7766822314c9b5f927bb7b98bb6588d31e1bade03bcee698b769454aab",
+    "src/workbench/components/ReviewPanel.vue": "a3e94cb7d144599f40ab98227d0b3ad78686226119b3849010115f9adb0e8a39",
+    "src/workbench/components/WorkbenchHeader.vue": "effd25ea84ccfb60cd43a98393b6376eedeb4f265968b2c1081bc568d12f23ae",
+    "src/workbench/components/internal/CalloutList.vue": "f814151fe53956bff82e8c27f350fbf5823608a7a1c9a0fb66f882fcf668fd8f",
+    "src/workbench/types.ts": "4143b0580e0b944a4d341e4214622e281511cba86454d85882437c35420ef626"
+  },
+  "extensionPaths": [
+    "src/prototype/",
+    "src/data/prdData.ts",
+    "src/data/generatedDocs.ts",
+    "prd.md",
+    "requirements.json",
+    "traceability-matrix.md",
+    "ai-handoff.md",
+    "CHANGELOG.md",
+    "review-data/",
+    "versions/"
+  ]
+}

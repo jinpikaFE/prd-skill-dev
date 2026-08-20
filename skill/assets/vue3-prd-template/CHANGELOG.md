@@ -1,5 +1,11 @@
 # 变更记录
 
+## 0.2.0 - 2026-08-20 11:04 CST
+
+- 工作台固定使用 Ant Design Vue，移动端原型使用 Vant，桌面端原型使用 Ant Design Vue。
+- 新增独立 `prototype.html` 和 iframe 隔离，避免原型 UI 库样式影响工作台。
+- 新增 `targetPlatform`、原型视口配置、模板锁定清单和工作台漂移校验。
+
 ## 0.1.0 - 2026-08-19 00:00 CST
 
 - 新增 Vue3 + Vite + TypeScript + Pinia + Vant + markdown-it + Mermaid PRD 工作台模板。

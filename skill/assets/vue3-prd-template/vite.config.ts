@@ -51,6 +51,8 @@ const workspaceEntries = [
   "pnpm-lock.yaml",
   "pnpm-workspace.yaml",
   "index.html",
+  "prototype.html",
+  ".prd-template.json",
   "vite.config.ts",
   "tsconfig.json",
   "tsconfig.node.json",
@@ -377,4 +379,12 @@ function createReviewFileStorePlugin(): Plugin {
 
 export default defineConfig({
   plugins: [vue(), createReviewFileStorePlugin()],
+  build: {
+    rollupOptions: {
+      input: {
+        workbench: path.resolve(process.cwd(), "index.html"),
+        prototype: path.resolve(process.cwd(), "prototype.html"),
+      },
+    },
+  },
 });
