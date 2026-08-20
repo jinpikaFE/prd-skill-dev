@@ -51,30 +51,25 @@
 
 ## 快速开始
 
-克隆仓库：
+如果你只是想使用 `$prd`，最推荐的方式是直接让 Codex 从这个仓库安装技能。可以在 Codex 中发送：
 
-```bash
-git clone git@github.com:jinpikaFE/prd-skill-dev.git
-cd prd-skill-dev
+```text
+请从 git@github.com:jinpikaFE/prd-skill-dev.git 仓库的 skill/ 目录安装 Codex skill，安装后技能名为 prd。
 ```
 
-安装或刷新本机 Codex 技能副本：
+如果当前 Codex 环境无法访问 SSH 仓库，可以改用 HTTPS 地址：
 
-```bash
-node scripts/sync-installed-skill.mjs --install
+```text
+请从 https://github.com/jinpikaFE/prd-skill-dev.git 仓库的 skill/ 目录安装 Codex skill，安装后技能名为 prd。
 ```
 
-确认安装副本与开发源码一致：
-
-```bash
-node scripts/sync-installed-skill.mjs --check
-```
-
-然后在 Codex 中直接使用：
+安装完成后即可直接使用：
 
 ```text
 $prd 做一个移动端会员积分兑换功能原型
 ```
+
+如果你是维护者，需要克隆仓库、校验模板或刷新本机安装副本，请看下方“维护与验证”。
 
 ## 模板能力
 
@@ -136,4 +131,5 @@ node scripts/sync-installed-skill.mjs --install
 
 ## 变更记录
 
+- 2026-08-20 15:46:13 CST：调整快速开始安装说明，优先提供适合 Codex 直接安装 GitHub skill 的使用方式。
 - 2026-08-20 15:40:48 CST：新增项目 README，补充定位、能力、快速开始、维护验证和模板边界说明。
