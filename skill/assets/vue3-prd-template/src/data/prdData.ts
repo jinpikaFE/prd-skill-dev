@@ -193,9 +193,8 @@ export const prdData: PrdData = {
     {
       id: "comment-001",
       annotationId: "ann-core-entry",
-      author: "产品评审",
       text: "请在真实需求中补充入口展示条件和不可用状态。",
-      createdAt: "当前草稿",
+      createdAt: "2026-08-20T00:00:00+08:00",
       status: "open",
     },
   ],

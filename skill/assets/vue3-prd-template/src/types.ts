@@ -1,5 +1,37 @@
 export type WorkspaceView = "prd" | "prototype" | "docs";
 export type TargetPlatform = "mobile" | "desktop";
+export type RuntimeMode = "local" | "hosted";
+
+export type RuntimeCapabilities = {
+  runtime: RuntimeMode;
+  hasDraft: boolean;
+  canManageVersions: boolean;
+  canManageAnnotations: boolean;
+  canAddComments: boolean;
+  canManageDraftComments: boolean;
+  canPackage: boolean;
+  canOpenFolder: boolean;
+};
+
+export type ReviewPackageStatus = {
+  versionCount: number;
+  publishDirectory: string;
+  lastPackage?: {
+    packagePath: string;
+    fileName: string;
+    generatedAt: string;
+    sizeBytes: number;
+  };
+};
+
+export type ReviewPackageResult = {
+  packagePath: string;
+  fileName: string;
+  versionCount: number;
+  generatedAt: string;
+  sizeBytes: number;
+  codexPrompt: string;
+};
 
 export type Choice = {
   id: string;
@@ -132,9 +164,10 @@ export type PrototypeScreen = {
 export type ReviewComment = {
   id: string;
   annotationId: string;
-  author: string;
+  author?: string;
   text: string;
   createdAt: string;
+  updatedAt?: string;
   status: "open" | "resolved";
 };
 
@@ -153,6 +186,7 @@ export type VersionRenameRecord = {
 
 export type VersionRecord = {
   id: string;
+  releaseId?: string;
   name?: string;
   label: string;
   status: "draft" | "final";
@@ -165,6 +199,7 @@ export type VersionRecord = {
   source?: "generated" | "workspace";
   deletable?: boolean;
   snapshot?: VersionSnapshot;
+  reviewComments?: ReviewComment[];
   renameHistory?: VersionRenameRecord[];
 };
 

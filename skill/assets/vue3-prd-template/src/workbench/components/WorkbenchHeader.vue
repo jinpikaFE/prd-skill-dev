@@ -2,7 +2,7 @@
   <header class="workbench-header">
     <div class="workbench-title">
       <p>PRD 原型工作台</p>
-      <h1>{{ featureName }}</h1>
+      <EllipsisTooltipText :text="featureName" class-name="workbench-title-name" />
       <span>{{ summary }}</span>
     </div>
 
@@ -10,15 +10,23 @@
       <div class="version-row">
         <a-select
           :value="activeVersionId"
-          :options="versionOptions"
+          :options="renderedVersionOptions"
           class="history-select"
           aria-label="历史版本"
           @change="emit('versionChange', String($event))"
         />
-        <span class="version-date">{{ activeVersionDate }}</span>
-        <a-button type="primary" size="small" @click="emit('release')">发版</a-button>
-        <a-dropdown :disabled="!canManageVersion">
-          <a-button size="small"><MoreOutlined /></a-button>
+        <EllipsisTooltipText :text="activeVersionDate" class-name="version-date" />
+        <a-tooltip v-if="canOpenFolder" title="打开当前原型所在文件夹">
+          <a-button size="small" aria-label="打开当前原型所在文件夹" @click="emit('openFolder')">
+            <FolderOpenOutlined />
+          </a-button>
+        </a-tooltip>
+        <a-button v-if="canRelease" type="primary" size="small" @click="emit('release')">发版</a-button>
+        <a-button v-if="canPackage" size="small" @click="emit('package')"><FileZipOutlined /> 生成发布包</a-button>
+        <a-dropdown v-if="canManageVersion">
+          <a-tooltip title="版本操作">
+            <a-button size="small" aria-label="版本操作"><MoreOutlined /></a-button>
+          </a-tooltip>
           <template #overlay>
             <a-menu>
               <a-menu-item key="rename" @click="emit('rename')">重命名版本</a-menu-item>
@@ -49,17 +57,19 @@
       <span>状态</span>
       <a-select :value="stateId" :options="stateOptions" @change="emit('stateChange', String($event))" />
     </label>
-    <a-alert v-if="readonly" message="当前为定版快照，只读查看" type="info" show-icon />
+    <a-alert v-if="reviewModeMessage" :message="reviewModeMessage" type="info" show-icon />
   </section>
 </template>
 
 <script setup lang="ts">
-import { MoreOutlined } from "@ant-design/icons-vue";
+import { FileZipOutlined, FolderOpenOutlined, MoreOutlined } from "@ant-design/icons-vue";
+import { computed, h } from "vue";
 import type { WorkspaceView } from "../../types";
+import EllipsisTooltipText from "./internal/EllipsisTooltipText.vue";
 
 type SelectOption = { label: string; value: string };
 
-defineProps<{
+const props = defineProps<{
   featureName: string;
   summary: string;
   view: WorkspaceView;
@@ -67,7 +77,10 @@ defineProps<{
   activeVersionDate: string;
   versionOptions: SelectOption[];
   canManageVersion: boolean;
-  readonly: boolean;
+  canRelease: boolean;
+  canPackage: boolean;
+  canOpenFolder: boolean;
+  reviewModeMessage: string;
   roleId: string;
   scenarioId: string;
   stateId: string;
@@ -76,12 +89,22 @@ defineProps<{
   stateOptions: SelectOption[];
 }>();
 
+const renderedVersionOptions = computed(() => props.versionOptions.map((option) => ({
+  ...option,
+  label: h(EllipsisTooltipText, {
+    text: option.label,
+    className: "history-option-label",
+  }),
+})));
+
 const emit = defineEmits<{
   viewChange: [view: WorkspaceView];
   versionChange: [versionId: string];
   release: [];
   rename: [];
   deleteVersion: [];
+  openFolder: [];
+  package: [];
   roleChange: [id: string];
   scenarioChange: [id: string];
   stateChange: [id: string];

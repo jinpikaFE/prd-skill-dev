@@ -10,8 +10,12 @@
       <template v-if="selectedAnnotation">
         <h2>{{ selectedAnnotation.index }}. {{ selectedAnnotation.title }}</h2>
         <p>{{ selectedAnnotation.detail }}</p>
-        <a-tag>{{ selectedAnnotation.reqId }} · {{ requirementTitle(selectedAnnotation.reqId) }}</a-tag>
-        <a-space v-if="!readonly" class="selected-actions">
+        <RequirementTag
+          :req-id="selectedAnnotation.reqId"
+          :requirements="requirements"
+          show-title
+        />
+        <a-space v-if="canManageAnnotations" class="selected-actions">
           <a-button size="small" @click="beginAnnotationEdit(selectedAnnotation)"><EditOutlined /> 编辑</a-button>
           <a-button size="small" danger @click="emit('deleteAnnotation', selectedAnnotation.id)"><DeleteOutlined /> 删除</a-button>
         </a-space>
@@ -20,12 +24,12 @@
     </section>
 
     <section class="comment-editor">
-      <div class="panel-heading"><strong>添加评论</strong><span>临时评审记录</span></div>
-      <a-textarea v-model:value="commentText" :disabled="readonly || !selectedAnnotation" :rows="3" placeholder="记录问题、讨论或待确认项" />
+      <div class="panel-heading"><strong>添加评论</strong><span>匿名评审 · 记录日期</span></div>
+      <a-textarea v-model:value="commentText" :disabled="!canAddComments || !selectedAnnotation" :rows="3" placeholder="记录问题、讨论或待确认项" />
       <a-button
         type="primary"
         block
-        :disabled="readonly || !selectedAnnotation || !commentText.trim()"
+        :disabled="!canAddComments || !selectedAnnotation || !commentText.trim()"
         @click="submitComment"
       >添加评论</a-button>
     </section>
@@ -42,7 +46,14 @@
           @click="emit('locateAnnotation', annotation.id)"
         >
           <span>{{ annotation.index }}</span>
-          <div><strong>{{ annotation.title }}</strong><small>{{ annotation.reqId }} · {{ annotation.detail }}</small></div>
+          <div>
+            <EllipsisTooltipText :text="annotation.title" class-name="review-item-title" />
+            <EllipsisTooltipText
+              :text="`${annotation.reqId} · ${annotation.detail}`"
+              :rows="2"
+              class-name="review-item-detail"
+            />
+          </div>
         </button>
       </div>
     </section>
@@ -54,11 +65,19 @@
           <button type="button" @click="emit('locateComment', comment)">
             <strong>{{ annotationTitle(comment.annotationId) }}</strong>
             <p>{{ comment.text }}</p>
-            <small>{{ comment.author }} · {{ comment.createdAt }}</small>
+            <small>{{ commentMeta(comment) }}</small>
           </button>
-          <a-space v-if="!readonly" size="small">
-            <a-button type="text" size="small" @click="beginCommentEdit(comment)"><EditOutlined /></a-button>
-            <a-button type="text" size="small" danger @click="emit('deleteComment', comment.id)"><DeleteOutlined /></a-button>
+          <a-space v-if="canManageComments" size="small">
+            <a-tooltip title="编辑评论">
+              <a-button type="text" size="small" aria-label="编辑评论" @click="beginCommentEdit(comment)">
+                <EditOutlined />
+              </a-button>
+            </a-tooltip>
+            <a-tooltip title="删除评论">
+              <a-button type="text" size="small" danger aria-label="删除评论" @click="emit('deleteComment', comment.id)">
+                <DeleteOutlined />
+              </a-button>
+            </a-tooltip>
           </a-space>
         </article>
       </div>
@@ -86,13 +105,17 @@ import { Empty } from "ant-design-vue";
 import { computed, reactive, ref } from "vue";
 import type { AnnotationPatch, Requirement, ReviewComment } from "../../types";
 import type { LocatedAnnotation } from "../types";
+import EllipsisTooltipText from "./internal/EllipsisTooltipText.vue";
+import RequirementTag from "./internal/RequirementTag.vue";
 
 const props = defineProps<{
   annotations: LocatedAnnotation[];
   comments: ReviewComment[];
   selectedAnnotation?: LocatedAnnotation;
   requirements: Requirement[];
-  readonly: boolean;
+  canManageAnnotations: boolean;
+  canAddComments: boolean;
+  canManageComments: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -113,13 +136,41 @@ const annotationDraft = reactive({ id: "", title: "", reqId: "", detail: "" });
 const commentDraft = reactive({ id: "", text: "" });
 const requirementOptions = computed(() => props.requirements.map((item) => ({ label: `${item.id} · ${item.title}`, value: item.id })));
 
-function requirementTitle(reqId: string) {
-  return props.requirements.find((item) => item.id === reqId)?.title || "未匹配需求";
-}
-
 function annotationTitle(annotationId: string) {
   const annotation = props.annotations.find((item) => item.id === annotationId);
   return annotation ? `${annotation.index}. ${annotation.title}` : "标注已移除";
+}
+
+function formatCommentDate(comment: ReviewComment) {
+  const createdAt = comment.createdAt?.trim() || "";
+  const normalized = createdAt.replace(/^(\d{4})\/(\d{2})\/(\d{2})/, "$1-$2-$3");
+  const parsedTime = Date.parse(normalized);
+  if (Number.isFinite(parsedTime)) return formatTimestamp(parsedTime);
+  const timestamp = Number(comment.id.match(/^comment-(\d{13})/)?.[1]);
+  if (Number.isFinite(timestamp) && timestamp > 0) {
+    return formatTimestamp(timestamp);
+  }
+  return "日期未记录";
+}
+
+function formatTimestamp(timestamp: number) {
+  if (!Number.isFinite(timestamp)) return "日期未记录";
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date(timestamp));
+}
+
+function commentMeta(comment: ReviewComment) {
+  const date = `创建时间：${formatCommentDate(comment)}`;
+  const updateTime = comment.updatedAt ? ` · 编辑时间：${formatTimestamp(Date.parse(comment.updatedAt))}` : "";
+  const author = comment.author ? `${comment.author} · ` : "";
+  return `${author}${date}${updateTime}`;
 }
 
 function submitComment() {

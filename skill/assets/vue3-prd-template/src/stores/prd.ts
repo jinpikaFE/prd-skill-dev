@@ -4,7 +4,10 @@ import type {
   AnnotationPatch,
   BoardAnnotation,
   CanvasAnnotation,
+  ReviewPackageResult,
+  ReviewPackageStatus,
   ReviewComment,
+  RuntimeCapabilities,
   VersionRecord,
   VersionSnapshot,
   WorkspaceView,
@@ -24,17 +27,38 @@ type PrdState = {
   deletedAnnotationIds: string[];
   comments: ReviewComment[];
   versionRecords: VersionRecord[];
+  runtimeCapabilities: RuntimeCapabilities;
   fileStoreReady: boolean;
   fileStoreError: string;
   lastInteraction: string;
 };
 
 type FileStoreState = {
+  capabilities?: RuntimeCapabilities;
   draft?: VersionSnapshot;
   versions?: VersionRecord[];
 };
 
+type OpenFolderResult = {
+  folderPath: string;
+};
+
 const fileStoreApi = "/__prd_file_store";
+const initialHostedRuntime = import.meta.env.VITE_PRD_RUNTIME === "hosted";
+const initialCapabilities: RuntimeCapabilities = {
+  runtime: initialHostedRuntime ? "hosted" : "local",
+  hasDraft: !initialHostedRuntime,
+  canManageVersions: !initialHostedRuntime,
+  canManageAnnotations: !initialHostedRuntime,
+  canAddComments: !initialHostedRuntime,
+  canManageDraftComments: !initialHostedRuntime,
+  canPackage: !initialHostedRuntime,
+  canOpenFolder: !initialHostedRuntime,
+};
+
+function nowText() {
+  return new Date().toISOString();
+}
 
 function cloneArray<T>(items: T[]) {
   return JSON.parse(JSON.stringify(items)) as T[];
@@ -88,6 +112,14 @@ async function requestFileStore<T>(endpoint: string, options?: RequestInit) {
   }
 
   return payload;
+}
+
+async function requestPublishedState() {
+  const response = await fetch("./published-state.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("未找到发布包中的 published-state.json");
+  }
+  return response.json() as Promise<FileStoreState>;
 }
 
 function firstFeatureFileId() {
@@ -220,6 +252,7 @@ export const usePrdStore = defineStore("prd", {
       deletedAnnotationIds: snapshot.deletedAnnotationIds,
       comments: snapshot.comments,
       versionRecords: [],
+      runtimeCapabilities: { ...initialCapabilities },
       fileStoreReady: false,
       fileStoreError: "",
       lastInteraction: "尚未触发原型交互",
@@ -327,7 +360,12 @@ export const usePrdStore = defineStore("prd", {
       );
     },
     applyFileStoreState(state: FileStoreState) {
-      this.applyDraftSnapshot(normalizeSnapshot(state.draft));
+      if (state.capabilities) {
+        this.runtimeCapabilities = { ...state.capabilities };
+      }
+      if (this.runtimeCapabilities.hasDraft) {
+        this.applyDraftSnapshot(normalizeSnapshot(state.draft));
+      }
       this.versionRecords = Array.isArray(state.versions) ? state.versions : [];
     },
     async loadReviewData() {
@@ -336,10 +374,28 @@ export const usePrdStore = defineStore("prd", {
         this.applyFileStoreState(state);
         this.fileStoreReady = true;
         this.fileStoreError = "";
-        this.lastInteraction = "已从项目 JSON 文件读取评审数据。";
+        this.lastInteraction = this.runtimeCapabilities.runtime === "hosted"
+          ? "已进入线上评审模式。"
+          : "已从项目 JSON 文件读取评审数据。";
       } catch (error) {
+        if (this.runtimeCapabilities.runtime === "hosted") {
+          try {
+            const state = await requestPublishedState();
+            this.applyFileStoreState(state);
+            this.fileStoreReady = true;
+            this.fileStoreError = "";
+            this.lastInteraction = "已从发布包读取定版评审数据。评论功能需在部署时接入存储服务。";
+            return;
+          } catch (publishedStateError) {
+            this.fileStoreError = publishedStateError instanceof Error
+              ? publishedStateError.message
+              : "读取发布包状态失败";
+          }
+        }
         this.fileStoreReady = false;
-        this.fileStoreError = error instanceof Error ? error.message : "文件存储服务未启动";
+        if (!this.fileStoreError) {
+          this.fileStoreError = error instanceof Error ? error.message : "文件存储服务未启动";
+        }
         this.lastInteraction = "文件存储服务未启动，当前改动只会临时显示，需通过 dev server 打开才能写入 JSON 文件。";
       }
     },
@@ -404,7 +460,7 @@ export const usePrdStore = defineStore("prd", {
       );
       void this.saveDraftReviewData();
     },
-    addComment(text: string) {
+    addDraftComment(text: string) {
       const trimmed = text.trim();
       if (!trimmed || !this.selectedAnnotationId) {
         return;
@@ -413,12 +469,29 @@ export const usePrdStore = defineStore("prd", {
       this.comments.unshift({
         id: `comment-${Date.now()}`,
         annotationId: this.selectedAnnotationId,
-        author: "评审者",
         text: trimmed,
-        createdAt: "刚刚",
+        createdAt: nowText(),
         status: "open",
       });
       void this.saveDraftReviewData();
+    },
+    async addVersionComment(versionId: string, text: string) {
+      const trimmed = text.trim();
+      if (!trimmed || !this.selectedAnnotationId) {
+        return;
+      }
+      const state = await requestFileStore<FileStoreState>("/comments", {
+        method: "POST",
+        body: JSON.stringify({
+          versionId,
+          annotationId: this.selectedAnnotationId,
+          text: trimmed,
+        }),
+      });
+      this.applyFileStoreState(state);
+      this.fileStoreReady = true;
+      this.fileStoreError = "";
+      this.lastInteraction = "已添加匿名评审评论。";
     },
     updateComment(commentId: string, text: string) {
       const trimmed = text.trim();
@@ -434,6 +507,7 @@ export const usePrdStore = defineStore("prd", {
         return {
           ...comment,
           text: trimmed,
+          updatedAt: nowText(),
         };
       });
       void this.saveDraftReviewData();
@@ -480,6 +554,31 @@ export const usePrdStore = defineStore("prd", {
       this.fileStoreReady = true;
       this.fileStoreError = "";
       this.lastInteraction = "已删除选中的定版目录和版本记录。";
+    },
+    async openPrototypeFolder(versionId: string) {
+      const result = await requestFileStore<OpenFolderResult>("/open-folder", {
+        method: "POST",
+        body: JSON.stringify({ versionId }),
+      });
+      this.lastInteraction = `已打开当前原型目录：${result.folderPath}`;
+      return result.folderPath;
+    },
+    async openReviewPackageFolder() {
+      const result = await requestFileStore<OpenFolderResult>("/open-package-folder", {
+        method: "POST",
+      });
+      this.lastInteraction = `已打开发布包目录：${result.folderPath}`;
+      return result.folderPath;
+    },
+    async getReviewPackageStatus() {
+      return requestFileStore<ReviewPackageStatus>("/package-status");
+    },
+    async createReviewPackage() {
+      const result = await requestFileStore<ReviewPackageResult>("/package", {
+        method: "POST",
+      });
+      this.lastInteraction = `已生成发布包：${result.packagePath}`;
+      return result;
     },
   },
 });

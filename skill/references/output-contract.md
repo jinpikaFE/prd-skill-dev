@@ -29,6 +29,8 @@ Use this structure unless the user requests another one:
 |-- vite.config.ts
 |-- tsconfig.json
 |-- tsconfig.node.json
+|-- scripts/
+|   `-- build-review-package.mjs
 |-- src/
 |   |-- main.ts
 |   |-- App.vue
@@ -58,8 +60,11 @@ Use this structure unless the user requests another one:
 `-- versions/
     |-- index.json            Finalized version index with dates, paths, and rename history
     `-- vX.Y.Z/             Only when the user explicitly finalizes a version
-        `-- review-data.json
+        |-- review-data.json
+        `-- review-comments.json
 ```
+
+The local “生成发布包” action creates `publish/<feature>-review-<timestamp>.zip`. The ZIP contains built `index.html`, `prototype.html`, `assets/`, finalized `versions/`, `published-state.json`, and `deployment-handoff.json`. `publish/` is generated output and is not required in a fresh draft workspace.
 
 The root is the Vue3 prototype project. Do not generate a separate single-file HTML PRD mode. `index.html` is the Ant Design Vue workbench entry. `prototype.html` is the isolated high-fidelity product entry loaded by the workbench iframe.
 
@@ -100,8 +105,9 @@ The workspace must include:
 - Left feature menu as a directory/file tree. Directories are larger feature groups ordered by priority; files are smaller feature pages under that group. The first file under each feature group should be a Mermaid-rendered flowchart for that feature. Subsequent files should be operation snapshots or snapshot groups for subfeatures.
 - Clicking a left-side file should show only that function's PRD canvas, so the canvas does not become one oversized board. A subfeature may contain multiple snapshots when one snapshot cannot explain the interaction, comments, or edge cases clearly.
 - Top history selector for finalized versions plus a release button near the selector. If no version has been finalized, show the current draft and make it clear that history appears only after the user says “定版” or uses the page release action. Use Ant Design Vue `Select`, `Dropdown`, `Segmented`, `Modal`, and `Button` controls in the workbench rather than Vant or native `select`.
+- Top icon action for opening the active prototype's local folder through the Vite PRD file API. Open the workspace root for the current draft and the matching `versions/vX.Y.Z/` directory while viewing a finalized version. Use Ant Design Vue `Tooltip` and `FolderOpenOutlined`; never accept an arbitrary filesystem path from the browser.
 - Releasing a draft and deleting a finalized version record must require a second confirmation. Version records should be renameable and deletable from the top history area. Page release/delete/rename are file operations through the local Vite PRD file API: release creates `versions/vX.Y.Z/`, writes `versions/vX.Y.Z/review-data.json`, and updates `versions/index.json`; rename changes the directory name, updates index and version JSON, and appends `renameHistory`; delete removes the directory and index record.
-- Page-level release must freeze an independent snapshot containing custom annotations, annotation edits, deleted annotation IDs, and comments. Switching to a finalized version must read that version snapshot only, not the current draft state. Finalized versions should make annotation/comment creation, editing, and deletion read-only. If an old finalized record lacks a snapshot, show the initial baseline data instead of current draft data.
+- Page-level release must freeze an independent snapshot containing custom annotations, annotation edits, deleted annotation IDs, and comments. Switching to a finalized version must read that version snapshot only, not the current draft state. Finalized annotations remain read-only, while the canvas remains draggable/zoomable and reviewers may add append-only anonymous comments to `review-comments.json`. These comments must store and display `createdAt` and cannot be edited or deleted. If an old finalized record lacks a snapshot, show the initial baseline data instead of current draft data.
 - The release source is always the current draft. If the reviewer is viewing a finalized version and clicks release, the workspace should switch back to the current draft before release. The first release name defaults to `1.0.0`; subsequent defaults increment the patch segment, such as `1.0.1`. Release and rename must prevent duplicate finalized version names. Every finalized version should display its release date.
 - Top view switch between `PRD 标注` and `高保真原型`.
 - Main PRD board view: a zoomable and draggable canvas with drag mode selected by default and mouse-wheel zoom. It should be generated after the high-fidelity prototype and should look like product operation snapshots with nearby requirement callouts, not abstract requirement cards. Flowchart and mindmap boards may be rendered with Mermaid inside the same canvas model.
@@ -110,12 +116,15 @@ The workspace must include:
 - In-page document viewer for generated outputs such as `prd.md`, `requirements.json`, `traceability-matrix.md`, `ai-handoff.md`, and `CHANGELOG.md`, with Markdown preview rendering and a download button for the currently selected document.
 - Right panel listing all PRD annotations and all PRD comments in separate sections.
 - Ability to add a temporary comment to the selected PRD annotation.
+- Every comment record must include `createdAt`, and the right-side comment list must visibly render the creation date.
 - Ability to edit and delete annotations and comments.
 - Any delete action for annotations, comments, or versions must require a second confirmation. Deleting an annotation should also make the consequence clear when related comments will be removed.
 - Ability to click an annotation or comment and switch to the related canvas, locate the marker, and highlight the related annotation in the PRD board.
 - Requirement bindings using `data-req-id` or `data-req-ids` in Vue templates.
 - Data-driven content from `src/data/prdData.ts`.
-- No browser `localStorage`, session storage, IndexedDB, or browser-only persistence for review data. The generated workbench must be opened through the Vite dev server so the built-in `__prd_file_store` middleware can write JSON files. Static production builds remain useful for read-only demos, but file write actions require the dev server.
+- No browser `localStorage`, session storage, IndexedDB, or browser-only persistence for review data. The generated workbench must be opened through the Vite dev server so the built-in `__prd_file_store` middleware can write JSON files and open the active prototype folder. Static production builds remain useful for read-only demos, but local file and folder actions require the dev server.
+- Local mode should expose a “生成发布包” action near the version controls. It requires at least one finalized version, creates a platform-neutral ZIP, and shows the package path, finalized-version count, a human-readable Asia/Shanghai generation date, file size, a fixed action for opening the `publish/` directory, and a copyable Codex deployment prompt. The prompt must state that finalized history and canvas pan/zoom are already built into the static package; only anonymous-comment persistence is an optional deployment adapter.
+- Hosted mode is review-only: it has no draft, hides release/rename/delete/open-folder/package actions, lists finalized history only, and keeps product annotations read-only. The static package defaults to `canAddComments: false`; a later Codex deployment task may enable append-only anonymous comments by implementing `GET /__prd_file_store/state` and `POST /__prd_file_store/comments` according to `deployment-handoff.json`.
 - No Vant imports or Vant CSS in `src/main.ts`, `src/App.vue`, or `src/workbench/`. The mobile prototype may import Vant and `vant/lib/index.css` only inside the prototype document. This iframe boundary prevents Vant resets and component styles from changing the workbench `body`, menus, fields, buttons, and dialogs.
 - Preserve `.prd-template.json` and every listed `lockedFiles` hash. Generated feature work belongs only in the manifest's extension paths. The validator must fail when a locked workbench file drifts.
 
@@ -255,6 +264,7 @@ Use `versions/` only for finalized snapshots.
 - Create `versions/vX.Y.Z/` only after the user explicitly says “定版”, “发版”, “固化版本”, “归档版本”, or equivalent.
 - Always keep `versions/index.json` in the draft package, even when it has an empty `versions` array.
 - The finalized directory should contain the complete Vue3 workspace and documents for that version, plus `review-data.json` containing that version's frozen annotations, annotation edits, deleted annotation IDs, comments, and version metadata.
+- Each finalized directory should also contain `review-comments.json` for comments added after release. Keep a stable `releaseId` across version renames so a later hosted comment adapter has a stable storage key.
 - The top history selector should list finalized versions and the current draft separately.
 - If no finalized versions exist, the selector should show only the current draft or a disabled “暂无定版历史” state.
 - Renaming a finalized version should rename the matching `versions/vX.Y.Z/` directory, update `versions/index.json`, rewrite that version's `review-data.json`, and append `renameHistory`.

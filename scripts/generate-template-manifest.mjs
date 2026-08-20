@@ -7,9 +7,15 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const templateRoot = path.join(repoRoot, "skill", "assets", "vue3-prd-template");
 const lockedEntries = [
   "AGENTS.md",
+  "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
   "index.html",
   "prototype.html",
   "vite.config.ts",
+  "tsconfig.json",
+  "tsconfig.node.json",
+  "scripts",
   "src/App.vue",
   "src/main.ts",
   "src/styles.css",
@@ -40,7 +46,7 @@ for (const entry of lockedEntries) {
 
 const manifest = {
   schemaVersion: 1,
-  templateVersion: "2.0.0",
+  templateVersion: "2.2.0",
   workbenchUiLibrary: "ant-design-vue",
   prototypeUiLibraries: {
     mobile: "vant",

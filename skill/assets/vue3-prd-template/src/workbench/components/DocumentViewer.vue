@@ -2,8 +2,8 @@
   <section class="docs-view" aria-label="文档查看">
     <a-menu mode="inline" :selected-keys="[activeDocId]" class="doc-menu" @click="selectDoc">
       <a-menu-item v-for="doc in docs" :key="doc.id">
-        <FileTextOutlined />
-        <span>{{ doc.title }}</span>
+        <template #icon><FileTextOutlined /></template>
+        <EllipsisTooltipText :text="doc.title" class-name="doc-menu-title" />
       </a-menu-item>
     </a-menu>
 
@@ -11,10 +11,12 @@
       <header>
         <div>
           <p>生成文档</p>
-          <h2>{{ activeDoc.title }}</h2>
-          <span>{{ activeDoc.summary }}</span>
+          <EllipsisTooltipText :text="activeDoc.title" class-name="document-title" />
+          <span class="document-summary">{{ activeDoc.summary }}</span>
         </div>
-        <a-button type="primary" ghost @click="download">下载 {{ activeDoc.fileName }}</a-button>
+        <a-tooltip :title="activeDoc.fileName || undefined">
+          <a-button type="primary" ghost @click="download">下载 {{ activeDoc.fileName }}</a-button>
+        </a-tooltip>
       </header>
       <div class="markdown-preview" v-html="renderedContent"></div>
     </article>
@@ -26,6 +28,7 @@ import { FileTextOutlined } from "@ant-design/icons-vue";
 import MarkdownIt from "markdown-it";
 import { computed, ref } from "vue";
 import type { GeneratedDoc } from "../../types";
+import EllipsisTooltipText from "./internal/EllipsisTooltipText.vue";
 
 const props = defineProps<{ docs: GeneratedDoc[] }>();
 const activeDocId = ref(props.docs[0]?.id || "");

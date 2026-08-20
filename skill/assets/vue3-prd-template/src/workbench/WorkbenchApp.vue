@@ -20,8 +20,11 @@
           :active-version-id="activeVersionTarget"
           :active-version-date="activeVersionDate"
           :version-options="versionOptions"
-          :can-manage-version="isViewingFinalVersion"
-          :readonly="isViewingFinalVersion"
+          :can-manage-version="canManageVersion"
+          :can-release="canRelease"
+          :can-package="store.runtimeCapabilities.canPackage"
+          :can-open-folder="store.runtimeCapabilities.canOpenFolder"
+          :review-mode-message="reviewModeMessage"
           :role-id="store.activeRoleId"
           :scenario-id="store.activeScenarioId"
           :state-id="store.activeStateId"
@@ -33,6 +36,8 @@
           @release="openReleaseDialog"
           @rename="openRenameDialog"
           @delete-version="confirmDeleteVersion"
+          @open-folder="openPrototypeFolder"
+          @package="openPackageDialog"
           @role-change="store.activeRoleId = $event"
           @scenario-change="store.activeScenarioId = $event"
           @state-change="store.activeStateId = $event"
@@ -45,7 +50,7 @@
           :section="store.activeSection"
           :annotations="activeSectionAnnotations"
           :selected-annotation-id="store.selectedAnnotationId"
-          :readonly="isViewingFinalVersion"
+          :can-add-annotation="canManageAnnotations"
           :platform="prdData.meta.targetPlatform"
           :viewport-width="prdData.meta.prototypeViewport.width"
           :viewport-height="prdData.meta.prototypeViewport.height"
@@ -53,6 +58,7 @@
           :role-id="store.activeRoleId"
           :scenario-id="store.activeScenarioId"
           :state-id="store.activeStateId"
+          :requirements="prdData.requirements"
           @select-annotation="selectAnnotation"
           @add-annotation="addAnnotation"
         />
@@ -71,6 +77,7 @@
           :state-label="activeStateLabel"
           :feedback="store.lastInteraction"
           :req-ids="activeScreen.reqIds"
+          :requirements="prdData.requirements"
         />
 
         <DocumentViewer v-else :docs="generatedDocs" />
@@ -78,10 +85,12 @@
 
       <ReviewPanel
         :annotations="allAnnotations"
-        :comments="displayedSnapshot.comments"
+        :comments="displayedComments"
         :selected-annotation="selectedAnnotation"
         :requirements="prdData.requirements"
-        :readonly="isViewingFinalVersion"
+        :can-manage-annotations="canManageAnnotations"
+        :can-add-comments="store.runtimeCapabilities.canAddComments"
+        :can-manage-comments="canManageComments"
         @locate-annotation="locateAnnotation"
         @locate-comment="locateComment"
         @add-comment="addComment"
@@ -119,12 +128,68 @@
           </a-form-item>
         </a-form>
       </a-modal>
+
+      <a-modal
+        v-model:open="packageDialogOpen"
+        title="生成发布包"
+        :ok-text="packageResult ? '关闭' : '开始打包'"
+        cancel-text="取消"
+        :confirm-loading="packageLoading"
+        :ok-button-props="{ disabled: packageActionDisabled }"
+        @ok="handlePackageModalOk"
+      >
+        <a-result
+          v-if="packageResult"
+          status="success"
+          title="发布包已生成"
+          :sub-title="packageResult.packagePath"
+        >
+          <template #extra>
+            <div class="package-result-summary">
+              <a-descriptions size="small" :column="1" bordered>
+                <a-descriptions-item label="定版数量">{{ packageResult.versionCount }}</a-descriptions-item>
+                <a-descriptions-item label="生成日期">{{ formatDateTime(packageResult.generatedAt) }}</a-descriptions-item>
+                <a-descriptions-item label="文件大小">{{ formatFileSize(packageResult.sizeBytes) }}</a-descriptions-item>
+              </a-descriptions>
+              <div class="package-result-actions">
+                <a-button type="primary" @click="copyPackagePath">复制包路径</a-button>
+                <a-button @click="openPackageFolder"><FolderOpenOutlined /> 打开 ZIP 所在目录</a-button>
+                <a-button @click="copyCodexPrompt">复制发布话术</a-button>
+              </div>
+            </div>
+          </template>
+        </a-result>
+        <a-spin v-else :spinning="packageLoading && !packageStatus">
+          <div>
+            <a-alert
+              v-if="packageStatus?.versionCount === 0"
+              type="warning"
+              show-icon
+              message="暂无可打包的定版"
+              description="请先完成至少一个定版，再生成发布包。"
+            />
+            <a-descriptions v-if="packageStatus" size="small" :column="1" bordered>
+              <a-descriptions-item label="定版数量">{{ packageStatus.versionCount }}</a-descriptions-item>
+              <a-descriptions-item label="输出目录">{{ packageStatus.publishDirectory }}</a-descriptions-item>
+              <a-descriptions-item label="最近生成">{{ formatDateTime(packageStatus.lastPackage?.generatedAt) }}</a-descriptions-item>
+            </a-descriptions>
+            <a-alert
+              class="package-note"
+              type="info"
+              show-icon
+              message="发布包只包含定版历史"
+              description="打包成功后，在 Codex 对话中指定 Vercel、Cloudflare Pages 或其他目标平台，AI 会按包内交接文件完成部署。"
+            />
+          </div>
+        </a-spin>
+      </a-modal>
     </div>
   </a-config-provider>
 </template>
 
 <script setup lang="ts">
 import { Modal, message } from "ant-design-vue";
+import { FolderOpenOutlined } from "@ant-design/icons-vue";
 import zhCN from "ant-design-vue/es/locale/zh_CN";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { generatedDocs } from "../data/generatedDocs";
@@ -134,6 +199,8 @@ import type {
   AnnotationPatch,
   BoardAnnotation,
   ReviewComment,
+  ReviewPackageResult,
+  ReviewPackageStatus,
   VersionSnapshot,
 } from "../types";
 import DocumentViewer from "./components/DocumentViewer.vue";
@@ -151,12 +218,21 @@ const canvasRef = ref<CanvasExpose>();
 const activeVersionTarget = ref("draft");
 const releaseDialogOpen = ref(false);
 const renameDialogOpen = ref(false);
+const packageDialogOpen = ref(false);
+const packageLoading = ref(false);
 const releaseNameDraft = ref("1.0.0");
 const renameNameDraft = ref("");
+const packageStatus = ref<ReviewPackageStatus>();
+const packageResult = ref<ReviewPackageResult>();
 
 const activeScreen = computed(() => prdData.prototype.screens[0]);
 const activeVersion = computed(() => store.versionRecords.find((version) => version.id === activeVersionTarget.value));
 const isViewingFinalVersion = computed(() => activeVersion.value?.status === "final");
+const isHostedReviewMode = computed(() => store.runtimeCapabilities.runtime === "hosted");
+const canManageAnnotations = computed(() => store.runtimeCapabilities.canManageAnnotations && !isViewingFinalVersion.value);
+const canManageComments = computed(() => store.runtimeCapabilities.canManageDraftComments && !isViewingFinalVersion.value);
+const canManageVersion = computed(() => store.runtimeCapabilities.canManageVersions && isViewingFinalVersion.value);
+const canRelease = computed(() => store.runtimeCapabilities.canManageVersions && store.runtimeCapabilities.hasDraft);
 const baselineSnapshot = computed<VersionSnapshot>(() => ({
   customAnnotations: [],
   annotationEdits: {},
@@ -167,18 +243,52 @@ const displayedSnapshot = computed(() => {
   if (!isViewingFinalVersion.value) return store.draftSnapshot();
   return activeVersion.value?.snapshot || baselineSnapshot.value;
 });
+const displayedComments = computed(() => {
+  const fallbackDate = activeVersion.value?.createdAt || prdData.meta.updatedAt;
+  if (!isViewingFinalVersion.value) {
+    return displayedSnapshot.value.comments.map((comment) => withCommentDateFallback(comment, fallbackDate));
+  }
+  return [
+    ...(activeVersion.value?.reviewComments || []),
+    ...displayedSnapshot.value.comments,
+  ].map((comment) => withCommentDateFallback(comment, fallbackDate));
+});
 
-const versionOptions = computed(() => [
-  { label: "当前草稿 · 未定版", value: "draft" },
-  ...store.versionRecords.map((version) => ({ label: `${version.name || version.label} · ${version.createdAt || "日期未知"}`, value: version.id })),
-]);
-const activeVersionDate = computed(() => activeVersion.value?.createdAt || "草稿会持续写入 review-data/draft.json");
-const versionStatusLabel = computed(() => isViewingFinalVersion.value ? "定版只读" : "当前草稿");
+const versionOptions = computed(() => {
+  const options = store.versionRecords.map((version) => ({
+    label: `${version.name || version.label} · ${version.createdAt || "日期未知"}`,
+    value: version.id,
+  }));
+  if (store.runtimeCapabilities.hasDraft) {
+    options.unshift({ label: "当前草稿 · 未定版", value: "draft" });
+  }
+  return options;
+});
+const activeVersionDate = computed(() => {
+  if (activeVersion.value?.createdAt) return activeVersion.value.createdAt;
+  return store.runtimeCapabilities.hasDraft ? "草稿会持续写入 review-data/draft.json" : "暂无可评审定版";
+});
+const versionStatusLabel = computed(() => {
+  if (isHostedReviewMode.value) return "线上评审";
+  return isViewingFinalVersion.value ? "定版评审" : "当前草稿";
+});
+const reviewModeMessage = computed(() => {
+  if (isHostedReviewMode.value) {
+    return store.runtimeCapabilities.canAddComments
+      ? "线上评审模式：版本内容和产品标注只读，可拖动画布并添加匿名评论。"
+      : "线上评审模式：版本内容和产品标注只读，可拖动画布；评论功能需由部署平台接入存储服务。";
+  }
+  if (isViewingFinalVersion.value) return "当前为定版快照：产品标注只读，可拖动画布并添加评论。";
+  return "";
+});
 const prototypeBaseUrl = computed(() => {
   if (isViewingFinalVersion.value && activeVersion.value?.directory) {
+    if (isHostedReviewMode.value) {
+      return `./${activeVersion.value.directory}/prototype.html`;
+    }
     return `/${activeVersion.value.directory}/prototype.html`;
   }
-  return "/prototype.html";
+  return isHostedReviewMode.value ? "./prototype.html" : "/prototype.html";
 });
 
 const roleOptions = computed(() => prdData.roles.map((item) => ({ label: item.label, value: item.id })));
@@ -214,6 +324,10 @@ const selectedAnnotation = computed(() => allAnnotations.value.find((annotation)
 
 const releaseNameError = computed(() => versionNameError(releaseNameDraft.value));
 const renameNameError = computed(() => versionNameError(renameNameDraft.value, activeVersion.value?.id));
+const packageActionDisabled = computed(() => {
+  if (packageResult.value) return false;
+  return !packageStatus.value || packageStatus.value.versionCount === 0;
+});
 
 function findFileBySectionId(sectionId: string) {
   return prdData.featureGroups.flatMap((group) => group.files).find((file) => file.sectionId === sectionId);
@@ -230,6 +344,17 @@ function toLocatedAnnotation(
   return { ...annotation, ...edits[annotation.id], frameId, sectionId, fileId, source };
 }
 
+function withCommentDateFallback(comment: ReviewComment, fallbackDate: string) {
+  const normalizedDate = comment.createdAt?.replace(/^(\d{4})\/(\d{2})\/(\d{2})/, "$1-$2-$3") || "";
+  if (Number.isFinite(Date.parse(normalizedDate))) return comment;
+  const timestamp = Number(comment.id.match(/^comment-(\d{13})/)?.[1]);
+  if (Number.isFinite(timestamp) && timestamp > 0) return comment;
+  return {
+    ...comment,
+    createdAt: fallbackDate,
+  };
+}
+
 function selectFile(fileId: string) {
   store.selectFile(fileId);
   canvasRef.value?.resetCanvas();
@@ -240,7 +365,7 @@ function selectAnnotation(id: string) {
 }
 
 function addAnnotation(payload: { frameId: string; reqId: string; x: number; y: number }) {
-  if (isViewingFinalVersion.value) return;
+  if (!canManageAnnotations.value) return;
   store.addAnnotation(payload.frameId, payload.reqId, payload.x, payload.y);
 }
 
@@ -261,23 +386,31 @@ function locateComment(comment: ReviewComment) {
   void locateAnnotation(comment.annotationId);
 }
 
-function addComment(text: string) {
-  if (isViewingFinalVersion.value) return;
-  store.addComment(text);
+async function addComment(text: string) {
+  if (!store.runtimeCapabilities.canAddComments) return;
+  try {
+    if (isViewingFinalVersion.value && activeVersion.value) {
+      await store.addVersionComment(activeVersion.value.id, text);
+      return;
+    }
+    store.addDraftComment(text);
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : "添加评论失败");
+  }
 }
 
 function updateAnnotation(id: string, patch: AnnotationPatch) {
-  if (isViewingFinalVersion.value) return;
+  if (!canManageAnnotations.value) return;
   store.updateAnnotation(id, patch);
 }
 
 function updateComment(id: string, text: string) {
-  if (isViewingFinalVersion.value) return;
+  if (!canManageComments.value) return;
   store.updateComment(id, text);
 }
 
 function confirmDeleteAnnotation(id: string) {
-  if (isViewingFinalVersion.value) return;
+  if (!canManageAnnotations.value) return;
   const annotation = allAnnotations.value.find((item) => item.id === id);
   Modal.confirm({
     title: "删除标注",
@@ -290,7 +423,7 @@ function confirmDeleteAnnotation(id: string) {
 }
 
 function confirmDeleteComment(id: string) {
-  if (isViewingFinalVersion.value) return;
+  if (!canManageComments.value) return;
   Modal.confirm({
     title: "删除评论",
     content: "确认删除这条临时评论？",
@@ -330,7 +463,7 @@ function confirmPublishVersion() {
   releaseDialogOpen.value = false;
   Modal.confirm({
     title: `确认发布 ${releaseNameDraft.value}？`,
-    content: "将创建完整版本目录并冻结当前草稿，发布后该版本中的标注和评论只读。",
+    content: "将创建完整版本目录并冻结当前草稿。定版后的产品标注只读，但仍可继续添加评审评论。",
     okText: "确认发版",
     cancelText: "取消",
     onOk: async () => {
@@ -387,6 +520,98 @@ function confirmDeleteVersion() {
   });
 }
 
+async function openPrototypeFolder() {
+  try {
+    await store.openPrototypeFolder(activeVersionTarget.value);
+    message.success("已打开当前原型所在文件夹");
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : "打开原型文件夹失败");
+  }
+}
+
+async function openPackageDialog() {
+  packageDialogOpen.value = true;
+  packageLoading.value = true;
+  packageResult.value = undefined;
+  try {
+    packageStatus.value = await store.getReviewPackageStatus();
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : "读取发布包状态失败");
+  } finally {
+    packageLoading.value = false;
+  }
+}
+
+async function handlePackageModalOk() {
+  if (packageResult.value) {
+    packageDialogOpen.value = false;
+    return;
+  }
+  if (packageActionDisabled.value) return;
+  packageLoading.value = true;
+  try {
+    packageResult.value = await store.createReviewPackage();
+    packageStatus.value = await store.getReviewPackageStatus();
+    message.success("发布包生成成功");
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : "生成发布包失败");
+  } finally {
+    packageLoading.value = false;
+  }
+}
+
+async function copyText(text: string, successMessage: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    message.success(successMessage);
+  } catch {
+    message.warning("复制失败，请手动选择内容");
+  }
+}
+
+function copyPackagePath() {
+  if (!packageResult.value) return;
+  void copyText(packageResult.value.packagePath, "发布包路径已复制");
+}
+
+function copyCodexPrompt() {
+  if (!packageResult.value) return;
+  void copyText(packageResult.value.codexPrompt, "Codex 发布话术已复制");
+}
+
+async function openPackageFolder() {
+  try {
+    await store.openReviewPackageFolder();
+    message.success("已打开 ZIP 所在目录");
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : "打开 ZIP 所在目录失败");
+  }
+}
+
+function formatDateTime(value?: string) {
+  if (!value) return "暂无";
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return value;
+  const parts = new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(new Date(timestamp));
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second}`;
+}
+
+function formatFileSize(sizeBytes: number) {
+  if (sizeBytes < 1024) return `${sizeBytes} B`;
+  if (sizeBytes < 1024 * 1024) return `${(sizeBytes / 1024).toFixed(1)} KB`;
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 function handlePrototypeMessage(event: MessageEvent) {
   if (event.origin !== window.location.origin || event.data?.type !== "prd:prototype-interaction") return;
   const reqText = Array.isArray(event.data.reqIds) ? ` · ${event.data.reqIds.join(", ")}` : "";
@@ -399,9 +624,18 @@ watch(allAnnotations, (annotations) => {
   }
 });
 
+watch(() => store.versionRecords, (versions) => {
+  if (activeVersionTarget.value === "draft" && store.runtimeCapabilities.hasDraft) return;
+  if (versions.some((version) => version.id === activeVersionTarget.value)) return;
+  activeVersionTarget.value = store.runtimeCapabilities.hasDraft ? "draft" : versions[0]?.id || "";
+}, { deep: true });
+
 onMounted(async () => {
   window.addEventListener("message", handlePrototypeMessage);
   await store.loadReviewData();
+  if (!store.runtimeCapabilities.hasDraft) {
+    activeVersionTarget.value = store.versionRecords[0]?.id || "";
+  }
 });
 onBeforeUnmount(() => window.removeEventListener("message", handlePrototypeMessage));
 </script>

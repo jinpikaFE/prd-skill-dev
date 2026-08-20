@@ -22,6 +22,7 @@ const requiredFiles = [
   "vite.config.ts",
   "tsconfig.json",
   "tsconfig.node.json",
+  "scripts/build-review-package.mjs",
   "src/main.ts",
   "src/App.vue",
   "src/styles.css",
@@ -37,6 +38,8 @@ const requiredFiles = [
   "src/workbench/components/PrototypePreview.vue",
   "src/workbench/components/ReviewPanel.vue",
   "src/workbench/components/WorkbenchHeader.vue",
+  "src/workbench/components/internal/EllipsisTooltipText.vue",
+  "src/workbench/components/internal/RequirementTag.vue",
   "src/prototype/main.ts",
   "src/prototype/mobile/MobilePrototype.vue",
   "src/prototype/desktop/DesktopPrototype.vue",
@@ -122,6 +125,7 @@ if (packageJson) {
     "vant",
     "markdown-it",
     "mermaid",
+    "archiver",
   ]) {
     if (!dependencies[dependency]) errors.push(`package.json must include ${dependency}.`);
   }
@@ -148,6 +152,15 @@ if (packageJson) {
   }
   if (!packageJson.scripts?.dev || !packageJson.scripts?.build) {
     warnings.push("package.json should include dev and build scripts.");
+  }
+  if (!/build-review-package\.mjs/.test(packageJson.scripts?.["build:review"] || "")) {
+    errors.push("package.json build:review must create the platform-neutral finalized review package.");
+  }
+}
+
+for (const providerSpecificFile of ["vercel.json", "tsconfig.vercel.json", "api/prd-file-store.ts"]) {
+  if (fileExists(providerSpecificFile)) {
+    errors.push(`${providerSpecificFile} must not be bundled into the platform-neutral PRD template.`);
   }
 }
 
@@ -235,6 +248,18 @@ const desktopSource = fileExists("src/prototype/desktop/DesktopPrototype.vue")
 const prdData = fileExists("src/data/prdData.ts") ? readText("src/data/prdData.ts") : "";
 const storeSource = fileExists("src/stores/prd.ts") ? readText("src/stores/prd.ts") : "";
 const viteConfig = fileExists("vite.config.ts") ? readText("vite.config.ts") : "";
+const reviewPanelSource = fileExists("src/workbench/components/ReviewPanel.vue")
+  ? readText("src/workbench/components/ReviewPanel.vue")
+  : "";
+const prdCanvasSource = fileExists("src/workbench/components/PrdCanvas.vue")
+  ? readText("src/workbench/components/PrdCanvas.vue")
+  : "";
+const workbenchAppSource = fileExists("src/workbench/WorkbenchApp.vue")
+  ? readText("src/workbench/WorkbenchApp.vue")
+  : "";
+const reviewPackageSource = fileExists("scripts/build-review-package.mjs")
+  ? readText("scripts/build-review-package.mjs")
+  : "";
 const traceability = fileExists("traceability-matrix.md") ? readText("traceability-matrix.md") : "";
 const handoff = fileExists("ai-handoff.md") ? readText("ai-handoff.md") : "";
 const changelog = fileExists("CHANGELOG.md") ? readText("CHANGELOG.md") : "";
@@ -256,6 +281,35 @@ if (/from\s+["']vant["']|vant\/lib|<van-/i.test(workbenchText)) {
 }
 if (workbenchText && /<select\b/i.test(workbenchText)) {
   errors.push("Workbench files must use Ant Design Vue selectors instead of native select controls.");
+}
+const nativeTitleOnInteractiveControl = /<(?:(?:button|a|input|select|textarea)|a-button|a-menu-item)(?=[\s/>])[^>]*\s+(?:v-bind:|:)?title\s*=/gi;
+const nativeTitleMatches = workbenchText.match(nativeTitleOnInteractiveControl) || [];
+if (nativeTitleMatches.length > 0) {
+  errors.push("Workbench interactive controls must use Ant Design Vue Tooltip instead of native title attributes.");
+}
+if (fileExists("src/workbench/components/internal/EllipsisTooltipText.vue")) {
+  const ellipsisTooltipSource = readText("src/workbench/components/internal/EllipsisTooltipText.vue");
+  if (!/<a-tooltip\b/i.test(ellipsisTooltipSource)) {
+    errors.push("EllipsisTooltipText.vue must render an Ant Design Vue Tooltip.");
+  }
+  if (!/ResizeObserver/.test(ellipsisTooltipSource)) {
+    errors.push("EllipsisTooltipText.vue must observe size changes with ResizeObserver.");
+  }
+  if (!/scrollWidth\s*>\s*element\.clientWidth/.test(ellipsisTooltipSource)
+    || !/scrollHeight\s*>\s*element\.clientHeight/.test(ellipsisTooltipSource)) {
+    errors.push("EllipsisTooltipText.vue must detect real horizontal and vertical overflow.");
+  }
+  if (!/rows\??:\s*number/.test(ellipsisTooltipSource) || !/-webkit-box-orient|WebkitLineClamp/.test(ellipsisTooltipSource)) {
+    errors.push("EllipsisTooltipText.vue must support explicit multi-line truncation rows.");
+  }
+}
+if (fileExists("src/workbench/components/internal/RequirementTag.vue")) {
+  const requirementTagSource = readText("src/workbench/components/internal/RequirementTag.vue");
+  if (!/<a-tooltip\b/i.test(requirementTagSource)
+    || !/requirements:\s*Requirement\[\]/.test(requirementTagSource)
+    || !/acceptanceCriteria/.test(requirementTagSource)) {
+    errors.push("RequirementTag.vue must show requirement details and acceptance content through Ant Design Vue Tooltip.");
+  }
 }
 for (const pattern of [/<a-menu\b/i, /<a-select\b/i, /<a-segmented\b/i, /<a-modal\b/i]) {
   if (workbenchText && !pattern.test(workbenchText)) {
@@ -282,6 +336,46 @@ if (fileExists("src/workbench/components/PrototypePreview.vue")) {
   if (!/<iframe\b/i.test(previewSource)) {
     errors.push("PrototypePreview.vue must embed prototype.html through an iframe.");
   }
+  if (!/<RequirementTag\b/.test(previewSource)) {
+    errors.push("PrototypePreview.vue must render requirement IDs with RequirementTag tooltips.");
+  }
+}
+if (fileExists("src/workbench/components/PrdCanvas.vue") && !/<RequirementTag\b/.test(readText("src/workbench/components/PrdCanvas.vue"))) {
+  errors.push("PrdCanvas.vue must render requirement IDs with RequirementTag tooltips.");
+}
+if (fileExists("src/workbench/components/ReviewPanel.vue") && !/<RequirementTag\b/.test(readText("src/workbench/components/ReviewPanel.vue"))) {
+  errors.push("ReviewPanel.vue must render the selected requirement with a RequirementTag tooltip.");
+}
+if (reviewPanelSource && (!/创建时间/.test(reviewPanelSource) || !/formatCommentDate/.test(reviewPanelSource))) {
+  errors.push("ReviewPanel.vue must visibly render every comment creation date.");
+}
+if (fileExists("src/workbench/components/DocumentViewer.vue")) {
+  const documentViewerSource = readText("src/workbench/components/DocumentViewer.vue");
+  if (!/<template\s+#icon>\s*<FileTextOutlined\s*\/>\s*<\/template>/i.test(documentViewerSource)) {
+    errors.push("DocumentViewer.vue must render document menu icons through the Ant Design Vue icon slot.");
+  }
+}
+if (fileExists("src/workbench/components/WorkbenchHeader.vue")) {
+  const workbenchHeaderSource = readText("src/workbench/components/WorkbenchHeader.vue");
+  if (!/FolderOpenOutlined/.test(workbenchHeaderSource)
+    || !/打开当前原型所在文件夹/.test(workbenchHeaderSource)
+    || !/openFolder/.test(workbenchHeaderSource)) {
+    errors.push("WorkbenchHeader.vue must provide the current prototype folder action with a tooltip.");
+  }
+  if (!/:options=["']renderedVersionOptions["']/.test(workbenchHeaderSource)
+    || !/h\(EllipsisTooltipText/.test(workbenchHeaderSource)
+    || !/className:\s*["']history-option-label["']/.test(workbenchHeaderSource)) {
+    errors.push("Workbench history options must use EllipsisTooltipText nodes instead of native Select title tooltips.");
+  }
+}
+if (fileExists("src/workbench/components/internal/CalloutList.vue")) {
+  const calloutListSource = readText("src/workbench/components/internal/CalloutList.vue");
+  if (!/class=["']callout-index["']/.test(calloutListSource)) {
+    errors.push("CalloutList.vue must identify the annotation number with the callout-index class.");
+  }
+}
+if (fileExists("src/styles.css") && /\.callout-item(?:\.active)?\s*>\s*span/.test(readText("src/styles.css"))) {
+  errors.push("Callout number styles must target callout-index instead of every direct span child.");
 }
 
 const platformMatch = prdData.match(/targetPlatform:\s*["'](mobile|desktop)["']/);
@@ -301,11 +395,53 @@ if (sourceText && /localStorage|sessionStorage|indexedDB/i.test(sourceText)) {
 if (viteConfig && !/__prd_file_store/.test(viteConfig)) {
   errors.push("vite.config.ts must include the __prd_file_store middleware for file-backed review data.");
 }
+if (viteConfig && (!/node:child_process/.test(viteConfig) || !/endpoint\s*===\s*["']\/open-folder["']/.test(viteConfig))) {
+  errors.push("vite.config.ts must provide the local open-folder endpoint for the active prototype directory.");
+}
 if (storeSource && !/loadReviewData/.test(storeSource)) {
   errors.push("src/stores/prd.ts must load review data from project JSON files.");
 }
 if (storeSource && !/saveDraftReviewData/.test(storeSource)) {
   errors.push("src/stores/prd.ts must save draft review data to review-data/draft.json.");
+}
+if (storeSource && !/openPrototypeFolder/.test(storeSource)) {
+  errors.push("src/stores/prd.ts must expose the current prototype folder action.");
+}
+if (storeSource && !/openReviewPackageFolder/.test(storeSource)) {
+  errors.push("src/stores/prd.ts must expose the generated review package folder action.");
+}
+if (storeSource && (!/addVersionComment/.test(storeSource) || !/createdAt:\s*nowText\(\)/.test(storeSource))) {
+  errors.push("src/stores/prd.ts must support finalized-version comments and timestamp new draft comments.");
+}
+if (prdCanvasSource && (!/canAddAnnotation/.test(prdCanvasSource) || !/panMode\.value/.test(prdCanvasSource))) {
+  errors.push("PrdCanvas.vue must keep canvas pan/zoom independent from finalized annotation editing.");
+}
+if (workbenchAppSource && (!/runtimeCapabilities/.test(workbenchAppSource)
+  || !/reviewComments/.test(workbenchAppSource)
+  || !/can-package/.test(workbenchAppSource)
+  || !/formatDateTime\(packageResult\.generatedAt\)/.test(workbenchAppSource)
+  || !/打开 ZIP 所在目录/.test(workbenchAppSource))) {
+  errors.push("WorkbenchApp.vue must drive local/hosted actions from runtime capabilities and merge post-release comments.");
+}
+if (viteConfig && (!/review-comments\.json/.test(viteConfig)
+  || !/endpoint\s*===\s*["']\/comments["']/.test(viteConfig)
+  || !/endpoint\s*===\s*["']\/package["']/.test(viteConfig)
+  || !/endpoint\s*===\s*["']\/package-status["']/.test(viteConfig)
+  || !/endpoint\s*===\s*["']\/open-package-folder["']/.test(viteConfig)
+  || !/PRD_RUNTIME/.test(viteConfig))) {
+  errors.push("vite.config.ts must provide local finalized comments, review-package creation, and runtime-mode injection.");
+}
+if (reviewPackageSource && (!/base:\s*["']\.\/["']/.test(reviewPackageSource)
+  || !/from\s+["']vite["']/.test(reviewPackageSource)
+  || !/from\s+["']archiver["']/.test(reviewPackageSource)
+  || !/published-state\.json/.test(reviewPackageSource)
+  || !/deployment-handoff\.json/.test(reviewPackageSource)
+  || !/review-comments\.json/.test(reviewPackageSource)
+  || !/runtime:\s*["']hosted["']/.test(reviewPackageSource)
+  || !/canAddComments:\s*false/.test(reviewPackageSource)
+  || !/定版历史查看、画布拖动缩放均已内置/.test(reviewPackageSource)
+  || /需要保留定版历史查看、画布拖动缩放/.test(reviewPackageSource))) {
+  errors.push("The review-package script must build relative assets, include finalized data and deployment handoff, and default hosted comments to disabled.");
 }
 if (storeSource && !/VersionSnapshot|snapshot\s*:|activeVersionSnapshot/i.test(storeSource)) {
   warnings.push("src/stores/prd.ts should freeze and read independent per-version snapshots.");

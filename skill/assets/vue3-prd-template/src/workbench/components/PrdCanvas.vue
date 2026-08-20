@@ -1,19 +1,24 @@
 <template>
   <section class="board-view" aria-label="PRD 标注看板">
     <div class="active-file-strip">
-      <div>
+      <div class="active-file-info">
         <p>当前文件</p>
-        <strong>{{ fileTitle }}</strong>
-        <span>{{ section?.description }}</span>
+        <EllipsisTooltipText :text="fileTitle" class-name="active-file-title" />
+        <EllipsisTooltipText :text="section?.description || ''" :rows="2" class-name="active-file-description" />
       </div>
       <div class="req-list">
-        <a-tag v-for="reqId in section?.reqIds || []" :key="reqId" color="blue">{{ reqId }}</a-tag>
+        <RequirementTag
+          v-for="reqId in section?.reqIds || []"
+          :key="reqId"
+          :req-id="reqId"
+          :requirements="requirements"
+        />
       </div>
     </div>
 
     <div class="canvas-toolbar">
       <a-space>
-        <a-button :type="annotationMode ? 'primary' : 'default'" :disabled="readonly" @click="toggleAnnotationMode">
+        <a-button :type="annotationMode ? 'primary' : 'default'" :disabled="!canAddAnnotation" @click="toggleAnnotationMode">
           <PushpinOutlined /> 添加标注
         </a-button>
         <a-button :type="panMode ? 'primary' : 'default'" @click="togglePanMode">
@@ -21,9 +26,13 @@
         </a-button>
       </a-space>
       <a-space class="zoom-controls">
-        <a-button aria-label="缩小画布" @click="zoomOut"><MinusOutlined /></a-button>
+        <a-tooltip title="缩小画布">
+          <a-button aria-label="缩小画布" @click="zoomOut"><MinusOutlined /></a-button>
+        </a-tooltip>
         <span>{{ zoomPercent }}</span>
-        <a-button aria-label="放大画布" @click="zoomIn"><PlusOutlined /></a-button>
+        <a-tooltip title="放大画布">
+          <a-button aria-label="放大画布" @click="zoomIn"><PlusOutlined /></a-button>
+        </a-tooltip>
         <a-button @click="resetCanvas">重置</a-button>
       </a-space>
     </div>
@@ -103,8 +112,8 @@
 
               <div class="snapshot-details">
                 <div class="snapshot-meta">
-                  <strong>{{ frame.title }}</strong>
-                  <span>{{ frame.subtitle }}</span>
+                  <EllipsisTooltipText :text="frame.title" class-name="snapshot-title" />
+                  <EllipsisTooltipText :text="frame.subtitle" :rows="2" class-name="snapshot-subtitle" />
                   <div><a-tag v-for="chip in frame.chips" :key="chip">{{ chip }}</a-tag></div>
                 </div>
                 <CalloutList
@@ -128,16 +137,18 @@
 import { DragOutlined, MinusOutlined, PlusOutlined, PushpinOutlined } from "@ant-design/icons-vue";
 import mermaid from "mermaid";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import type { BoardAnnotation, BoardFrame, BoardSection, TargetPlatform } from "../../types";
+import type { BoardAnnotation, BoardFrame, BoardSection, Requirement, TargetPlatform } from "../../types";
 import type { LocatedAnnotation } from "../types";
 import CalloutList from "./internal/CalloutList.vue";
+import EllipsisTooltipText from "./internal/EllipsisTooltipText.vue";
+import RequirementTag from "./internal/RequirementTag.vue";
 
 const props = defineProps<{
   fileTitle: string;
   section?: BoardSection;
   annotations: LocatedAnnotation[];
   selectedAnnotationId: string;
-  readonly: boolean;
+  canAddAnnotation: boolean;
   platform: TargetPlatform;
   viewportWidth: number;
   viewportHeight: number;
@@ -145,6 +156,7 @@ const props = defineProps<{
   roleId: string;
   scenarioId: string;
   stateId: string;
+  requirements: Requirement[];
 }>();
 
 const emit = defineEmits<{
@@ -208,7 +220,7 @@ function snapshotUrl(frame: BoardFrame) {
 }
 
 function toggleAnnotationMode() {
-  if (props.readonly) return;
+  if (!props.canAddAnnotation) return;
   annotationMode.value = !annotationMode.value;
   panMode.value = !annotationMode.value;
 }
@@ -219,7 +231,7 @@ function togglePanMode() {
 }
 
 function handleSurfaceClick(event: MouseEvent, frame: BoardFrame) {
-  if (!annotationMode.value || props.readonly) return;
+  if (!annotationMode.value || !props.canAddAnnotation) return;
   const surface = event.currentTarget as HTMLElement;
   const rect = surface.getBoundingClientRect();
   emit("addAnnotation", {
@@ -287,5 +299,11 @@ async function locateAnnotation(id: string) {
 
 defineExpose({ locateAnnotation, resetCanvas });
 watch(() => props.section?.id, () => { resetCanvas(); void renderDiagram(); });
+watch(() => props.canAddAnnotation, (canAddAnnotation) => {
+  if (canAddAnnotation) return;
+  annotationMode.value = false;
+  panMode.value = true;
+  dragStart.value = null;
+});
 onMounted(() => { void renderDiagram(); });
 </script>

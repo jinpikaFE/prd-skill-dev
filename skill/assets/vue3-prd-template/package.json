@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vue-tsc --noEmit && vite build",
+    "build:review": "vue-tsc --noEmit && node scripts/build-review-package.mjs",
     "preview": "vite preview --host 0.0.0.0"
   },
   "pnpm": {
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.4",
+    "archiver": "7.0.1",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.10.1",
     "typescript": "^5.6.3",

@@ -16,7 +16,12 @@
       <span>当前场景：{{ scenarioLabel }}</span>
       <span>当前状态：{{ stateLabel }}</span>
       <div>
-        <a-tag v-for="reqId in reqIds" :key="reqId" color="blue">{{ reqId }}</a-tag>
+        <RequirementTag
+          v-for="reqId in reqIds"
+          :key="reqId"
+          :req-id="reqId"
+          :requirements="requirements"
+        />
       </div>
     </aside>
   </section>
@@ -24,7 +29,8 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import type { TargetPlatform } from "../../types";
+import type { Requirement, TargetPlatform } from "../../types";
+import RequirementTag from "./internal/RequirementTag.vue";
 
 const props = defineProps<{
   platform: TargetPlatform;
@@ -39,6 +45,7 @@ const props = defineProps<{
   stateLabel: string;
   feedback: string;
   reqIds: string[];
+  requirements: Requirement[];
 }>();
 
 const prototypeUrl = computed(() => {

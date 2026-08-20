@@ -1,8 +1,8 @@
 <template>
   <aside class="feature-rail" aria-label="功能清单">
     <div class="brand-block">
-      <span>PRD 工作台</span>
-      <strong>{{ featureName }}</strong>
+      <span class="brand-kicker">PRD 工作台</span>
+      <EllipsisTooltipText :text="featureName" class-name="brand-title" />
       <small>{{ version }} · {{ statusLabel }}</small>
     </div>
 
@@ -16,10 +16,15 @@
     >
       <a-sub-menu v-for="group in orderedGroups" :key="group.id">
         <template #icon><FolderOutlined /></template>
-        <template #title>{{ group.title }}</template>
-        <a-menu-item v-for="file in group.files" :key="file.id" :title="file.description">
+        <template #title><EllipsisTooltipText :text="group.title" /></template>
+        <a-menu-item v-for="file in group.files" :key="file.id">
           <template #icon><FileOutlined /></template>
-          {{ file.title }}
+          <EllipsisTooltipText
+            :text="file.title"
+            :tooltip-title="file.description"
+            tooltip-trigger="always"
+            :tooltip-props="{ placement: 'right' }"
+          />
         </a-menu-item>
       </a-sub-menu>
     </a-menu>
@@ -30,6 +35,7 @@
 import { FileOutlined, FolderOutlined } from "@ant-design/icons-vue";
 import { computed } from "vue";
 import type { FeatureGroup } from "../../types";
+import EllipsisTooltipText from "./internal/EllipsisTooltipText.vue";
 
 const props = defineProps<{
   featureName: string;
